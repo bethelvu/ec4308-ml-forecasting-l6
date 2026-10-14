@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<script src="chapter6_files/libs/clipboard/clipboard.min.js"></script>
+<script src="chapter6_files/libs/quarto-html/tabby.min.js"></script>
+<script src="chapter6_files/libs/quarto-html/popper.min.js"></script>
+<script src="chapter6_files/libs/quarto-html/tippy.umd.min.js"></script>
+<link href="chapter6_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="chapter6_files/libs/quarto-html/light-border.css" rel="stylesheet">
+<link href="chapter6_files/libs/quarto-html/quarto-syntax-highlighting-bf27225e3a48a9273f3daa8f8e829971.css" rel="stylesheet" id="quarto-text-highlighting-styles"><meta charset="utf-8">
+  <meta name="generator" content="quarto-1.10.19">
+
+  <title>Chapter 6 — Tree-based methods: Decision trees for regression and classification</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="chapter6_files/libs/revealjs/dist/reset.css">
+  <link rel="stylesheet" href="chapter6_files/libs/revealjs/dist/reveal.css">
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: 1.5em;}
+    div.column{flex: auto;}
+    @media screen {
+    div.columns{gap: min(4vw, 1.5em);}
+    div.column{overflow-x: auto;}
+    }
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+      vertical-align: middle;
+    }
+  </style>
+  <link rel="stylesheet" href="chapter6_files/libs/revealjs/dist/theme/quarto-1c93194c1b4f096e9a67edeaac8ca77a.css">
+  <link href="chapter6_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
+  <link href="chapter6_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
+  <link href="chapter6_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
+  <link href="chapter6_files/libs/revealjs/plugin/quarto-support/footer.css" rel="stylesheet">
+  <style type="text/css">
+    .reveal div.sourceCode {
+      margin: 0;
+      overflow: auto;
+    }
+    .reveal div.hanging-indent {
+      margin-left: 1em;
+      text-indent: -1em;
+    }
+    .reveal .slide:not(.center) {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide.scrollable {
+      overflow-y: auto;
+    }
+    .reveal .footnotes {
+      height: 100%;
+      overflow-y: auto;
+    }
+    .reveal .slide .absolute {
+      position: absolute;
+      display: block;
+    }
+    .reveal .footnotes ol {
+      counter-reset: ol;
+      list-style-type: none; 
+      margin-left: 0;
+    }
+    .reveal .footnotes ol li:before {
+      counter-increment: ol;
+      content: counter(ol) ". "; 
+    }
+    .reveal .footnotes ol li > p:first-child {
+      display: inline-block;
+    }
+    .reveal .slide ul,
+    .reveal .slide ol {
+      margin-bottom: 0.5em;
+    }
+    .reveal .slide ul li,
+    .reveal .slide ol li {
+      margin-top: 0.4em;
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide ul[role="tablist"] li {
+      margin-bottom: 0;
+    }
+    .reveal .slide ul li > *:first-child,
+    .reveal .slide ol li > *:first-child {
+      margin-block-start: 0;
+    }
+    .reveal .slide ul li > *:last-child,
+    .reveal .slide ol li > *:last-child {
+      margin-block-end: 0;
+    }
+    .reveal .slide .columns:nth-child(3) {
+      margin-block-start: 0.8em;
+    }
+    .reveal blockquote {
+      box-shadow: none;
+    }
+    .reveal .tippy-content>* {
+      margin-top: 0.2em;
+      margin-bottom: 0.7em;
+    }
+    .reveal .tippy-content>*:last-child {
+      margin-bottom: 0.2em;
+    }
+    .reveal .slide > img.stretch.quarto-figure-center,
+    .reveal .slide > img.r-stretch.quarto-figure-center {
+      display: block;
+      margin-left: auto;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-left,
+    .reveal .slide > img.r-stretch.quarto-figure-left  {
+      display: block;
+      margin-left: 0;
+      margin-right: auto; 
+    }
+    .reveal .slide > img.stretch.quarto-figure-right,
+    .reveal .slide > img.r-stretch.quarto-figure-right  {
+      display: block;
+      margin-left: auto;
+      margin-right: 0; 
+    }
+  </style>
+</head>
+<body class="quarto-light">
+  <div class="reveal">
+    <div class="slides">
+
+
+<section class="slide level1 cover">
+<h1>CHAPTER SIX</h1>
+<div class="subtitle-line">
+<p>Tree-based methods: Decision trees for regression and classification</p>
+</div>
+<ul>
+<li>Module code: <strong>EC4308</strong></li>
+<li>Module title: <strong>Machine Learning and Economic Forecasting</strong></li>
+<li>Instructor: <strong>Vu Thanh Hai</strong></li>
+<li>Reference: ISLR = <em>An Introduction to Statistical Learning</em>, Ch. 8.1 (R packages: <code>tree</code>, <code>rpart</code>)</li>
+<li><em>Acknowledgement: I adapt Dr.&nbsp;Denis Tkachenko’s notes with some minor modifications. Thanks to Denis!</em></li>
+</ul>
+</section>
+<section class="slide level1 scrollable">
+<h1>Lecture outline</h1>
+<ol type="1">
+<li>Introduction and overview of the main ideas.</li>
+<li>Decision trees and the CART algorithm.</li>
+<li>Choosing tree size.</li>
+<li>Classification trees: loss functions and performance measures.</li>
+<li>Concluding remarks.</li>
+</ol>
+</section>
+<section class="slide level1">
+<h1>1) Introduction</h1>
+<ul>
+<li>So far, we have stayed within the familiar parametric models framework: estimate a linear regression with various regularizations.</li>
+<li>Although some of the models fitted could be classified as nonparametric (e.g., polynomial series whose degree grows with the sample size), we still wrote down the models in terms of a vector of parameters.</li>
+<li>Today we will talk about methods that belong to the realm of <em>nonparametric estimation</em>.</li>
+</ul>
+</section>
+<section id="intro-2" class="slide level1">
+<h1>1) Introduction</h1>
+<ul>
+<li>Specifically, we discuss the so-called <em>regression trees</em> and related methods, which are widely used in data science applications: CART (classification and regression trees), BART (Bayesian additive regression trees), MARS (multivariate adaptive regression splines), random forests… This chapter covers CART; ensemble methods come later.</li>
+<li>“Of all the well-known learning methods, decision trees come closest to meeting the requirements for serving as an off-the-shelf procedure for data mining.” (Hastie et al., 2009, <em>The Elements of Statistical Learning</em>, ESL)</li>
+<li>These methods are also quickly gaining traction in the econometric literature related to both prediction and causal inference.</li>
+<li>Trees can handle both regression and classification problems.</li>
+</ul>
+</section>
+<section id="intro-3" class="slide level1">
+<h1>1) Introduction</h1>
+<ul>
+<li>One could say: “But I’ve never heard of this stuff – what is there to gain over the usual regression-based methods?”</li>
+<li><strong>Preview of pros:</strong> flexible, needs no standardization of the data, selects variables, computationally efficient, scales up well, interpretable.</li>
+<li><strong>Preview of cons:</strong> simple trees will likely lose out to other methods on prediction and do not naturally lead to continuous models; ensembles of trees (bagging, boosting, random forests) improve prediction but at the cost of interpretability.</li>
+</ul>
+</section>
+<section class="slide level1">
+<h1>2) Decision tree</h1>
+<svg viewbox="0 0 720 230" width="78%" style="display:block;margin:0 auto 0.4em" role="img" aria-label="Umbrella decision tree: wake up, then split on the chance of rain and on the sky">
+  <style>
+    .n rect{fill:#6aa84f;rx:4} .n text{fill:#fff;font:600 15px sans-serif;text-anchor:middle}
+    .l rect{fill:#C00000;rx:4} .l text{fill:#fff;font:600 15px sans-serif;text-anchor:middle}
+    path{fill:none;stroke:#6aa84f;stroke-width:2}
+  </style>
+  <path d="M80 100 L150 30 M80 100 L150 170 M240 30 L300 30 M240 170 L300 130 M240 170 L300 205 M390 130 L440 95 M390 130 L440 160 M530 95 L570 95 M530 160 L570 160 M390 205 L440 205"></path>
+  <g class="n"><rect x="10" y="82" width="90" height="36"></rect><text x="55" y="105">Wake up</text></g>
+  <g class="n"><rect x="150" y="12" width="90" height="36"></rect><text x="195" y="35">&gt; 70% rain</text></g>
+  <g class="n"><rect x="150" y="152" width="90" height="36"></rect><text x="195" y="175">&lt; 70% rain</text></g>
+  <g class="n"><rect x="300" y="112" width="90" height="36"></rect><text x="345" y="135">&gt; 30% rain</text></g>
+  <g class="n"><rect x="300" y="187" width="90" height="36"></rect><text x="345" y="210">&lt; 30% rain</text></g>
+  <g class="n"><rect x="440" y="77" width="90" height="36"></rect><text x="485" y="100">Cloudy</text></g>
+  <g class="n"><rect x="440" y="142" width="90" height="36"></rect><text x="485" y="165">Sunny</text></g>
+  <g class="l"><rect x="300" y="12" width="100" height="36"></rect><text x="350" y="35">Umbrella</text></g>
+  <g class="l"><rect x="570" y="77" width="110" height="36"></rect><text x="625" y="100">Umbrella</text></g>
+  <g class="l"><rect x="570" y="142" width="110" height="36"></rect><text x="625" y="165">No umbrella</text></g>
+  <g class="l"><rect x="440" y="187" width="110" height="36"></rect><text x="495" y="210">No umbrella</text></g>
+</svg>
+<ul>
+<li>Basic logic: use a series of steps to reach a decision (ideally, we combine mini-decisions into good choices).</li>
+<li>Each decision (green box) is a <em>node</em>. The first node is called the <em>root node</em>.</li>
+<li>The final decision (red box) is a <em>leaf node</em> (or a <em>leaf</em>).</li>
+</ul>
+</section>
+<section class="slide level1">
+<h1>2) Regression tree idea</h1>
+<div class="tiny">
+<p><em>Hitters data (ISLR Ch. 8; middle and right panels: Figs. 8.2 and 8.1): predict <span class="math inline">\(y=\log(\text{Salary})\)</span> of baseball players from Years and Hits. Left: color = salary (cool colors low, warm colors high). Middle: regions <span class="math inline">\(R_1\)</span>–<span class="math inline">\(R_3\)</span>. Right: the tree; leaf values are mean log salary.</em></p>
+</div>
+<div class="columns short">
+<div class="column" style="width:33%;">
+<p><img data-src="media/image2.png" style="width:100.0%"></p>
+</div><div class="column" style="width:33%;">
+<p><img data-src="media/image3.png" style="width:100.0%"></p>
+</div><div class="column" style="width:33%;">
+<p><img data-src="media/image4.png" style="width:100.0%"></p>
+</div></div>
+<p>Overall, the tree stratifies or segments the players into three regions of predictor space:</p>
+<p><span class="math display">\[\begin{aligned}
+R_1&amp;=\{X \mid \text{Years}&lt;4.5\}, \qquad R_2=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}&lt;117.5\},\\
+R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
+\end{aligned}\]</span></p>
+</section>
+<section id="idea-2" class="slide level1">
+<h1>2) Regression tree idea</h1>
+<ul>
+<li>A regression tree partitions the covariate space into a set of rectangles and then fits a simple model (a constant) in each one.</li>
+<li>The function is constant on each rectangle; that constant is estimated by the average outcome in the rectangle:</li>
+</ul>
+<p><span class="math display">\[\hat f(x)=\sum_{m=1}^{M} \hat c_m\, 1(x\in R_m), \qquad \hat c_m=\operatorname{ave}(y_i \mid x_i\in R_m).\]</span></p>
+</section>
+<section id="idea-3" class="slide level1">
+<h1>2) Regression tree idea</h1>
+<div class="columns">
+<div class="column" style="width:30%;">
+<p><img data-src="media/image8-partition.png" style="width:100.0%"></p>
+</div><div class="column" style="width:70%;">
+<p><img data-src="media/image9.png" style="width:100.0%"></p>
+</div></div>
+<div class="tiny">
+<p><em>Partition into boxes <span class="math inline">\(R_1\)</span>–<span class="math inline">\(R_5\)</span> (left), the tree that produces it (middle), and the fitted step surface (right). Source: ESL Fig. 9.2.</em></p>
+</div>
+</section>
+<section id="idea-4" class="slide level1">
+<h1>2) Regression tree idea</h1>
+<ul>
+<li>Ideally, for a fixed number <span class="math inline">\(M\)</span> of boxes, we would choose the partition <span class="math inline">\((R_1,\dots,R_M)\)</span> to minimize (where <span class="math inline">\(\hat y_{R_m}\)</span> is the mean of <span class="math inline">\(y\)</span> in <span class="math inline">\(R_m\)</span>)</li>
+</ul>
+<p><span class="math display">\[\sum_{m=1}^{M}\ \sum_{i:\,x_i\in R_m}\left(y_i-\hat y_{R_m}\right)^2 .\]</span></p>
+<ul>
+<li>Problem: finding the best partition is computationally infeasible. We cannot enumerate all possible trees, i.e., all combinations of a first split and lower-level splits.</li>
+<li>Thus, we use a <em>greedy</em> method: make the best split at each step, without looking ahead.</li>
+</ul>
+</section>
+<section class="slide level1">
+<h1>2) Building a tree: CART</h1>
+<ul>
+<li>Main idea: form the tree using <em>recursive</em> binary partitions of the data.</li>
+<li><strong>Step 1:</strong> define <span class="math inline">\(R_1(j,c)=\{X \mid X_j&lt;c\}\)</span> and <span class="math inline">\(R_2(j,c)=\{X \mid X_j\ge c\}\)</span>, and choose the predictor <span class="math inline">\(j\)</span> and cut-point <span class="math inline">\(c\)</span> to solve</li>
+</ul>
+<p><span class="math display">\[\min_{j,\,c}\ \sum_{i:\,x_i\in R_1(j,c)}\left(y_i-\hat y_{i,R_1}\right)^2+\sum_{i:\,x_i\in R_2(j,c)}\left(y_i-\hat y_{i,R_2}\right)^2,\]</span></p>
+<p>where <span class="math inline">\(\hat y_{i,R_k}\)</span> is the forecast of <span class="math inline">\(y\)</span> based on data in region <span class="math inline">\(R_k\)</span> (usually the sample mean of <span class="math inline">\(y\)</span> in that region).</p>
+</section>
+<section id="cart-2" class="slide level1">
+<h1>2) Building a tree: CART</h1>
+<ul>
+<li><strong>Step 2:</strong> Split the data into the two subregions from Step 1. Repeat the splitting process for each subregion, taking the split that minimizes the squared loss. Keep iterating this step.</li>
+<li><strong>Step 3:</strong> Stop when the stopping criterion allows no further split (e.g., every split must leave at least 5 observations in each child node).</li>
+</ul>
+</section>
+<section class="slide level1">
+<h1>2) Building a tree: Boston data</h1>
+<ul>
+<li>Boston data: <code>medv</code> (median home value) on <code>lstat</code> (% lower-status population) only; pruned to 7 leaves, the size cross-validation (CV) picks in Section 3.</li>
+</ul>
+
+<img data-src="media/image12.png" class="quarto-figure quarto-figure-center r-stretch" style="width:88.0%"><ul>
+<li>At each interior node, we go left if <span class="math inline">\(x&lt;c\)</span>, right if <span class="math inline">\(x\ge c\)</span>.</li>
+<li>Each observation goes down the tree until it reaches a leaf.</li>
+<li>The leaves give a partition of <span class="math inline">\(X\)</span>-space into disjoint regions.</li>
+</ul>
+</section>
+<section id="boston-2" class="slide level1">
+<h1>2) Building a tree: Boston data</h1>
+
+<img data-src="media/image12.png" class="quarto-figure quarto-figure-center r-stretch" style="width:88.0%"><ul>
+<li>The resulting fitted function is just a step function with steps given by the tree partition.</li>
+<li>To make a prediction, find the interval to which the new observation belongs and set the forecast equal to the sample mean of that region.</li>
+</ul>
+</section>
+<section id="boston-3" class="slide level1">
+<h1>2) Building a tree: Boston data</h1>
+<ul>
+<li>Consider an additional predictor <span class="math inline">\(x_2=\)</span> <code>dis</code> (weighted mean of distances to five Boston employment centers). Again pruned to 7 leaves.</li>
+</ul>
+
+<img data-src="media/image13.png" class="quarto-figure quarto-figure-center r-stretch" style="width:92.0%"><ul>
+<li>We can see how the <span class="math inline">\(X\)</span>-space is partitioned.</li>
+<li>Notable feature: automatic interaction detection (in this fitted tree, <code>dis</code> is used only in some ranges of <code>lstat</code>).</li>
+</ul>
+<div class="guide">
+<p>Reading guide: <code>dis</code> is used in three of the four <code>lstat</code> bands, but not for <span class="math inline">\(9.725\le\)</span> <code>lstat</code> <span class="math inline">\(&lt;16.085\)</span> (leaf 20.3). In this fitted tree the effect of <code>dis</code> depends on <code>lstat</code>: suggestive of an interaction, found without being told.</p>
+</div>
+</section>
+<section id="boston-4" class="slide level1">
+<h1>2) Building a tree: Boston data</h1>
+<ul>
+<li>The estimated function is again a step function with steps given by the tree partition (one plateau per leaf):</li>
+</ul>
+
+<img data-src="media/image14.png" class="quarto-figure quarto-figure-center r-stretch" style="width:44.0%"></section>
+<section class="slide level1">
+<h1>2) Boston data: big tree</h1>
+<ul>
+<li>Big tree for just <code>lstat</code> (<code>tree</code> package, <code>mindev = 0.0001</code>): a node is split only if its deviance is at least 0.0001 × the root node’s deviance; each child keeps at least 5 observations. The labels are unreadable by design: this tree is far too big and chases noise.</li>
+</ul>
+<div class="columns short">
+<div class="column" style="width:50%;">
+<p><img data-src="media/image15.png" style="width:100.0%"></p>
+</div><div class="column" style="width:50%;">
+<p><img data-src="media/image16.png" style="width:100.0%"></p>
+</div></div>
+</section>
+<section class="slide level1">
+<h1>2) Building a tree: 401(k) example</h1>
+<ul>
+<li>Data: 1991 Survey of Income and Program Participation (SIPP), <span class="math inline">\(N=9{,}915\)</span>. We try to predict 401(k) eligibility.</li>
+<li>In Section 4, trees are fit on a training sample of 8,000 and evaluated on the remaining 1,915 (test sample).</li>
+<li>List of predictors: income, age, schooling, family size, married dummy, male dummy, two-earner household dummy.</li>
+<li>Such a model could be used to estimate propensity scores for studying the effect of 401(k) eligibility on wealth (e.g., Belloni et al., 2014).</li>
+<li>Since eligibility is a binary variable, predicting it is a <em>classification</em> problem (its splitting criteria come in Section 4).</li>
+</ul>
+</section>
+<section class="slide level1">
+<h1>2) 401(k) data: simple tree</h1>
+<ul>
+<li>A simple tree with depth <span class="math inline">\(\le 4\)</span>, fit on all 9,915 obs.; leaves show the predicted class and counts of <span style="white-space:nowrap"><span class="math inline">\(y=0\)</span> / <span class="math inline">\(y=1\)</span></span>.</li>
+</ul>
+
+<img data-src="media/image17.png" class="quarto-figure quarto-figure-center r-stretch" style="width:66.0%"><div class="tiny">
+<p><em><code>rpart</code> draws the branch where the printed condition holds on the left (e.g., <code>inc&gt;=8.104e+04</code>).</em></p>
+</div>
+</section>
+<section class="slide level1">
+<h1>2) 401(k) data: big tree</h1>
+<ul>
+<li>Now allow depth <span class="math inline">\(\le 30\)</span>.</li>
+</ul>
+
+<img data-src="media/image18.png" class="quarto-figure quarto-figure-center r-stretch" style="width:62.0%"><ul>
+<li>Do we need all 985 leaves (labels unreadable by design)? See Sections 3–4.</li>
+</ul>
+</section>
+<section class="slide level1">
+<h1>2) A quick summary on trees</h1>
+<ul>
+<li>Trees partition the predictor space using recursive binary splits.</li>
+<li>Each split consists of a decision rule that sends <span class="math inline">\(x_i\)</span> left or right.</li>
+<li>For a numeric predictor <span class="math inline">\(X_j\)</span>, the rule is based on the threshold <span class="math inline">\(X_j&lt;c\)</span>.</li>
+<li>For a categorical predictor <span class="math inline">\(X_j\)</span>, the rule lists the set of categories sent left.</li>
+</ul>
+</section>
+<section id="summary-2" class="slide level1">
+<h1>2) A quick summary on trees</h1>
+<ul>
+<li>The set of leaves gives a partition of the <span class="math inline">\(X\)</span>-space.</li>
+<li>For prediction, we let the observation <span class="math inline">\(x_i\)</span> follow the path dictated by the splitting rules down the tree until it reaches a leaf:
+<ul>
+<li>for a continuous outcome, the prediction is the sample mean of <span class="math inline">\(Y\)</span> in that node;</li>
+<li>for a categorical outcome, it is based on the category proportions of the training data in that node (e.g., the predicted category is the majority category in that node).</li>
+</ul></li>
+</ul>
+</section>
+<section id="summary-3" class="slide level1">
+<h1>2) A quick summary on trees</h1>
+<div class="columns">
+<div class="column" style="width:64%;">
+<ul>
+<li>Handles categorical (few levels) and numeric <span class="math inline">\(X\)</span> and <span class="math inline">\(Y\)</span> well.</li>
+<li>No need to worry about the scale of the <span class="math inline">\(X\)</span>’s.</li>
+<li>Computationally efficient (can scale up well).</li>
+<li>Does well in some cases where linear regression does not.</li>
+<li>Smaller trees are very interpretable.</li>
+<li>Performs automatic interaction detection.</li>
+<li>Does variable selection.</li>
+</ul>
+</div><div class="column" style="width:36%;">
+<p><img data-src="media/image19-tree-rect.png" style="width:92.0%"></p>
+<div class="tiny">
+<p><em>True classes: shading. The tree recovers the rectangular true boundary with two splits; a linear boundary cannot. Source: ISLR Fig. 8.7.</em></p>
+</div>
+</div></div>
+</section>
+<section class="slide level1">
+<h1>2) A quick summary on trees: Problems</h1>
+<div class="columns">
+<div class="column" style="width:64%;">
+<ul>
+<li>The step function a tree fits is crude and may not give the best predictive performance, e.g., it struggles with a linear relationship.</li>
+<li>Does not handle categorical variables well when there are a lot of categories (most other methods don’t either, however).</li>
+<li>Big/deep trees lose interpretability.</li>
+<li>Unstable: a changed early split alters the whole tree below it.</li>
+</ul>
+</div><div class="column" style="width:36%;">
+<p><img data-src="media/image19-linear-truth.png" style="width:92.0%"></p>
+<div class="tiny">
+<p><em>True boundary is linear: the tree needs a staircase of splits. Source: ISLR Fig. 8.7.</em></p>
+</div>
+</div></div>
+</section>
+<section class="slide level1">
+<h1>3) Choosing tree size</h1>
+<ul>
+<li>A tree is just a type of flexible model that we fit to data.</li>
+<li>As with other nonparametric or high-dimensional models, increased complexity will result in better in-sample fit – the key question is <em>how to restrict it</em>.</li>
+<li>For trees, the usual measure of complexity is the number of leaves or terminal nodes.</li>
+<li>Too many leaves = overfitting! Easy to fall into this trap.</li>
+<li>For best prediction performance, we will need to manage the <em>bias/variance tradeoff</em>, as usual.</li>
+</ul>
+</section>
+<section class="slide level1">
+<h1>3) Choosing tree size: minimization problem</h1>
+<ul>
+<li>Tree choice can be represented as a minimization problem over subtrees <span class="math inline">\(T\)</span> of a big initial tree, with penalized objective <span class="math inline">\(Q(T,y)\)</span>:</li>
+</ul>
+<p><span class="math display">\[\hat T_\alpha=\arg\min_T Q(T,y)=\arg\min_T\ L(T,y)+\alpha|T|\]</span></p>
+<ul>
+<li>Here <span class="math inline">\(L(T,y)\)</span> is a loss function of using the tree <span class="math inline">\(T\)</span> to forecast <span class="math inline">\(y\)</span>: usually the residual sum of squares (RSS). With squared loss, <span class="math inline">\(\ \hat T_\alpha=\arg\min_T\ \sum_{m=1}^{|T|}\sum_{i:\,x_i\in R_m}\left(y_i-\hat y_{R_m}\right)^2+\alpha|T|\)</span>.</li>
+<li><span class="math inline">\(|T|\)</span> is the number of leaves – a measure of tree complexity.</li>
+<li><span class="math inline">\(\alpha\)</span> is the “penalty” parameter that performs regularization. It plays the role of <span class="math inline">\(\lambda\)</span> in penalized regression fitting.</li>
+<li>If <span class="math inline">\(\alpha=0\)</span>, we would keep the full big tree, which overfits the data. We need to choose <span class="math inline">\(\alpha\)</span> carefully: it is the key tuning choice.</li>
+</ul>
+</section>
+<section id="size-2" class="slide level1">
+<h1>3) Choosing tree size: minimization problem</h1>
+<ul>
+<li>How do we actually perform the minimization?</li>
+<li>The idea behind the trees is simple, but trees are large and complex when viewed as a variable in an optimization problem.</li>
+<li>The key to success here is a simple algorithm: <em>cost-complexity pruning (weakest link pruning)</em>.</li>
+<li>Breiman et al.&nbsp;(1984) showed that for each <span class="math inline">\(\alpha\)</span> there is a unique smallest subtree of the big tree minimizing the objective function, and that pruning finds it exactly.</li>
+</ul>
+</section>
+<section class="slide level1">
+<h1>3) Minimization algorithm</h1>
+<ul>
+<li><strong>Stage 1:</strong> <em>Grow big.</em> Grow a big tree first by recursive binary splitting, with a stopping criterion (e.g., at least 5 observations in each child node).</li>
+<li>Rationale: we want to grow big initially, because a seemingly worthless split high in the tree may really play an important role lower down. So we let the data, not our prior beliefs, decide which early splits are worth keeping.</li>
+</ul>
+</section>
+<section id="algo-2" class="slide level1">
+<h1>3) Minimization algorithm</h1>
+<ul>
+<li><strong>Stage 2:</strong> <em>Prune back.</em> Recursively prune back the big tree from Stage 1: at each step, collapse the internal node whose removal gives the smallest increase in loss <em>per leaf removed</em> (the “weakest link”).</li>
+<li>This gives a nested sequence of subtrees of the big tree that is guaranteed to contain <span class="math inline">\(\hat T_\alpha\)</span> for every value of the penalty.</li>
+<li>For a given <span class="math inline">\(\alpha\)</span>, choose the subtree that has the smallest <span class="math inline">\(Q(T,y)\)</span>.</li>
+</ul>
+<div class="guide">
+<p>Weakest link: for an internal node <span class="math inline">\(t\)</span> with branch <span class="math inline">\(T_t\)</span>, let <span class="math inline">\(L(t)\)</span> be the loss if <span class="math inline">\(t\)</span> is collapsed to a leaf and <span class="math inline">\(L(T_t)\)</span> the loss of its branch. The increase in loss per leaf removed is <span class="math inline">\(g(t)=\dfrac{L(t)-L(T_t)}{|T_t|-1}\)</span>. Collapse the node with the smallest <span class="math inline">\(g(t)\)</span>, then repeat; the successive values of <span class="math inline">\(g\)</span> are the <span class="math inline">\(\alpha\)</span>’s at which the optimal subtree changes.</p>
+</div>
+</section>
+<section class="slide level1">
+<h1>3) Choice of <span class="math inline">\(\alpha\)</span></h1>
+<ul>
+<li>The remaining (most important) step is to choose <span class="math inline">\(\alpha\)</span> from the data.</li>
+<li>Not much surprise here: the usual approach is K-fold cross-validation (CV). In each fold, grow and prune on the training part and compute the error on the held-out part; pick the <span class="math inline">\(\alpha\)</span> with the lowest average CV error.</li>
+</ul>
+</section>
+<section class="slide level1">
+<h1>3) Simple example: Boston data</h1>
+<div class="columns">
+<div class="column" style="width:36%;">
+<ul>
+<li>Simple example with <code>lstat</code> only.</li>
+<li>Perform 10-fold CV.</li>
+<li>Y-axis: 10-fold mean squared error (MSE) relative to the sample mean fit vs.&nbsp;transformed <span class="math inline">\(\alpha\)</span> on the X-axis (<code>cp</code> <span class="math inline">\(=\alpha\)</span> divided by the RSS of the root; <code>cp</code> falls to the right, so trees grow).</li>
+</ul>
+<div class="guide">
+<p>Top axis: tree size. CV error falls steeply up to about 3 leaves, is lowest at about 7, then creeps back up: bigger trees fit noise. Bars: ±1 standard error (SE); dotted line: minimum + 1 SE (the “1-SE rule”, not used here, would pick a smaller tree).</p>
+</div>
+</div><div class="column" style="width:64%;">
+<div class="tall">
+<p><img data-src="media/image23.png" style="width:100.0%"></p>
+</div>
+</div></div>
+</section>
+<section id="cv-2" class="slide level1">
+<h1>3) Simple example: Boston data</h1>
+<div class="columns">
+<div class="column" style="width:40%;">
+<ul>
+<li>Three examples of tree fits for different <span class="math inline">\(\alpha\)</span>.</li>
+<li>Smaller <span class="math inline">\(\alpha\)</span> implies a smaller penalty on complexity and hence a bigger tree.</li>
+<li>Note the nesting: each smaller tree is a subtree of the bigger one.</li>
+<li>The middle tree has the CV-minimizing <span class="math inline">\(\alpha\)</span>.</li>
+</ul>
+</div><div class="column" style="width:60%;">
+<div class="tall">
+<p><img data-src="media/image24.png" style="width:100.0%"></p>
+</div>
+</div></div>
+</section>
+<section id="cv-3" class="slide level1">
+<h1>3) Simple example: Boston data</h1>
+<div class="columns">
+<div class="column" style="width:30%;">
+<ul>
+<li>CV-minimizing tree:</li>
+</ul>
+<div class="guide">
+<p>The same 7-leaf tree as in Section 2. Here <code>rpart</code> put the condition <code>lstat</code> <span class="math inline">\(\ge c\)</span> on the left branch (the lower-mean child), so the tree appears mirrored.</p>
+</div>
+</div><div class="column" style="width:70%;">
+<p><img data-src="media/image25.png" style="width:96.0%"></p>
+</div></div>
+</section>
+<section class="slide level1 companion-only">
+<h1>Interactive: prune a big tree with <span class="math inline">\(\alpha\)</span></h1>
+<iframe src="tree-demo.html" width="100%" height="602" style="border:none;" title="Interactive regression tree: grow a big tree, then prune it with cost-complexity alpha">
+</iframe>
+</section>
+<section class="slide level1">
+<h1>4) Loss function for classification trees</h1>
+<div class="columns">
+<div class="column" style="width:64%;">
+<ul>
+<li>Let us come back to the classification problem.</li>
+<li>MSE is less natural here – we use a different loss.</li>
+<li>Let the loss function be <span class="math inline">\(\ L(T,y)=\sum_{m=1}^{|T|}N_m\,L_m(T,y_m)\)</span>.</li>
+<li><span class="math inline">\(m\)</span> indexes terminal nodes in tree <span class="math inline">\(T\)</span>; <span class="math inline">\(N_m\)</span> is the no. of obs. in terminal node <span class="math inline">\(m\)</span>; <span class="math inline">\(y_m\)</span> is the vector of outcomes for obs. in node <span class="math inline">\(m\)</span>; <span class="math inline">\(L_m\)</span> is the node loss (next slide).</li>
+<li>Let <span class="math inline">\(R_m\)</span> denote the region of <span class="math inline">\(X\)</span> corresponding to node <span class="math inline">\(m\)</span>, and <span class="math inline">\(\ \hat p_{mk}=\frac{1}{N_m}\sum_{i:\,x_i\in R_m}1(y_i=k)\)</span>, <span class="math inline">\(k=1,\dots,K\)</span>.</li>
+<li>Observations in node <span class="math inline">\(m\)</span> are classified to <span class="math inline">\(k(m)=\arg\max_k \hat p_{mk}\)</span>.</li>
+</ul>
+</div><div class="column" style="width:36%;">
+<p><img data-src="media/image27.png" style="width:100.0%"></p>
+<div class="tiny">
+<p><em>Adapted from ESL Fig. 9.2.</em></p>
+</div>
+</div></div>
+</section>
+<section class="slide level1">
+<h1>4) Common loss functions (classification)</h1>
+<div class="columns">
+<div class="column" style="width:64%;">
+<p>Choices for the node loss <span class="math inline">\(L_m\)</span>:</p>
+<ul>
+<li><strong>Misclassification error:</strong> <span class="math inline">\(\ \dfrac{1}{N_m}\sum_{i:\,x_i\in R_m}1\big(y_i\ne k(m)\big)=1-\hat p_{m,k(m)}\)</span>
+<ul>
+<li>binary case: <span class="math inline">\(1-\max\{p,\,1-p\}\)</span>, with <span class="math inline">\(p\)</span> the proportion with <span class="math inline">\(y=1\)</span>.</li>
+</ul></li>
+<li><strong>Gini index:</strong> <span class="math inline">\(\ \sum_{k=1}^{K}\hat p_{mk}(1-\hat p_{mk})\)</span>; binary case: <span class="math inline">\(2p(1-p)\)</span>.</li>
+<li><strong>Cross-entropy or deviance</strong> (negative log-likelihood): <span class="math inline">\(\ -\sum_{k=1}^{K}\hat p_{mk}\log\hat p_{mk}\)</span>; binary case: <span class="math inline">\(-p\log p-(1-p)\log(1-p)\)</span>.</li>
+<li>Some also use squared loss (MSE) for a binary <span class="math inline">\(y\)</span>.</li>
+</ul>
+</div><div class="column" style="width:36%;">
+<p><img data-src="media/image28.png" style="width:100.0%"></p>
+<div class="tiny">
+<p><em>Adapted from ESL Fig. 9.2.</em></p>
+</div>
+</div></div>
+<div class="guide">
+<p>Worked example (binary node, natural log): <span class="math inline">\(p=0.2\)</span> gives misclassification <span class="math inline">\(0.2\)</span>, Gini <span class="math inline">\(2(0.2)(0.8)=0.32\)</span>, entropy <span class="math inline">\(\approx 0.50\)</span>; at <span class="math inline">\(p=0.5\)</span> all three peak (<span class="math inline">\(0.5\)</span>, <span class="math inline">\(0.5\)</span>, <span class="math inline">\(\log 2\approx0.69\)</span>).</p>
+</div>
+</section>
+<section class="slide level1">
+<h1>4) Common loss functions: comments</h1>
+<ul>
+<li>Misclassification error is not differentiable and is relatively insensitive to changes in node probabilities, so it is not recommended for growing the tree.</li>
+<li>Gini interpretation: error rate for a rule that assigns each observation to outcome <span class="math inline">\(k\)</span> with probability <span class="math inline">\(\hat p_{mk}\)</span>. In the binary case, it equals <span class="math inline">\(2p(1-p)\)</span>, twice the variance of the 0/1 outcome in the node.</li>
+<li>Typically, Gini or deviance is used for growing the tree.</li>
+<li>Any of the three losses can then be used for cost-complexity pruning; misclassification is the usual choice.</li>
+</ul>
+</section>
+<section class="slide level1">
+<h1>4) R packages: <em>tree</em> and <em>rpart</em></h1>
+<ul>
+<li>Two main tree packages in R: <em>tree</em> and <em>rpart</em>.</li>
+<li>Neither allows all the options discussed above. Syntax and display of output differ, so “shop around” between the two depending on what you are doing.</li>
+<li><em>tree</em> syntax: <code>tree.fit &lt;- tree(y ~ x, data = df, control = tree.control(...))</code></li>
+<li><em>rpart</em> syntax: <code>tree.fit &lt;- rpart(y ~ x, data = df, control = rpart.control(...))</code></li>
+<li>Full details are in the code, as usual.</li>
+</ul>
+</section>
+<section class="slide level1">
+<h1>4) Classification: 401(k) eligibility</h1>
+<div class="columns">
+<div class="column" style="width:30%;">
+<ul>
+<li>CV-min Gini tree:</li>
+</ul>
+<div class="guide">
+<p>CV-min = CV-minimizing. Grown with Gini (<code>rpart</code>); CV error is the misclassification rate. Fit on the training sample (8,000 obs.). Each leaf shows the predicted class, then the counts of <span style="white-space:nowrap"><span class="math inline">\(y=0\)</span> / <span class="math inline">\(y=1\)</span></span>.</p>
+</div>
+</div><div class="column" style="width:70%;">
+<p><img data-src="media/image30.png" style="width:92.0%"></p>
+</div></div>
+</section>
+<section id="k401-2" class="slide level1">
+<h1>4) Classification: 401(k) eligibility</h1>
+<div class="columns">
+<div class="column" style="width:62%;">
+<ul>
+<li>CV-min deviance tree (not unique; the smallest is shown):</li>
+</ul>
+<p><img data-src="media/image31.png" style="width:78.0%"></p>
+</div><div class="column" style="width:38%;">
+<div class="guide">
+<p>Grown and CV-pruned on deviance (<code>tree</code> package). Both leaves of the left split predict 0: the split makes the nodes purer (lower deviance) without changing the predicted class.</p>
+</div>
+</div></div>
+</section>
+<section id="k401-3" class="slide level1">
+<h1>4) Classification: 401(k) eligibility</h1>
+<div class="columns">
+<div class="column" style="width:30%;">
+<ul>
+<li>CV-min squared loss tree:</li>
+</ul>
+<div class="guide">
+<p>Grown and CV-pruned on squared loss (<code>rpart</code>, anova). Leaves show the share with <span class="math inline">\(y=1\)</span> and the node size. Classify 1 if the share exceeds 0.5: only the right-most leaf.</p>
+</div>
+</div><div class="column" style="width:70%;">
+<p><img data-src="media/image32.png" style="width:96.0%"></p>
+</div></div>
+</section>
+<section class="slide level1">
+<h1>4) Test-set performance: trees vs.&nbsp;logit</h1>
+<ul>
+<li>All three trees give the same 0/1 rule (predict 1 if income is above about $57,000), so they make identical test-set predictions.</li>
+<li>For reference, we also fit a logit model using the same variables; its results are in parentheses.</li>
+<li>Test-set errors: trees 665/1915 (logit 651; predicting 0 for everyone 735):</li>
+</ul>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"></th>
+<th style="text-align: center;">Actual 0</th>
+<th style="text-align: center;">Actual 1</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Predicted</strong></td>
+<td style="text-align: center;"><strong>0</strong></td>
+<td style="text-align: center;">1052 (1059)</td>
+<td style="text-align: center;">537 (530)</td>
+</tr>
+<tr class="even">
+<td></td>
+<td style="text-align: center;"><strong>1</strong></td>
+<td style="text-align: center;">128 (121)</td>
+<td style="text-align: center;">198 (205)</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section class="slide level1">
+<h1>4) Performance measures for classification</h1>
+<ul>
+<li>There is a lot of work on classification problems and, as a result, a lot of confusing jargon.</li>
+<li>Below are some common terms you may encounter.</li>
+<li><strong>Confusion matrix</strong> = matrix of predicted vs.&nbsp;actual values:</li>
+</ul>
+<table class="caption-top">
+<thead>
+<tr class="header">
+<th></th>
+<th style="text-align: center;"></th>
+<th style="text-align: center;">Actual 0</th>
+<th style="text-align: center;">Actual 1</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Predicted</strong></td>
+<td style="text-align: center;"><strong>0</strong></td>
+<td style="text-align: center;">1052</td>
+<td style="text-align: center;">537</td>
+</tr>
+<tr class="even">
+<td></td>
+<td style="text-align: center;"><strong>1</strong></td>
+<td style="text-align: center;">128</td>
+<td style="text-align: center;">198</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li><strong>Lift:</strong> summary of prediction performance comparing % of true positives (TP) to % classified as 1 (N).</li>
+<li><strong>ROC</strong> (Receiver Operating Characteristic): summary of prediction performance comparing % of true positives (TP) to % of false positives (FP).</li>
+</ul>
+</section>
+<section id="perf-2" class="slide level1">
+<h1>4) Performance measures for classification</h1>
+<ul>
+<li>Lift and ROC assess <span class="math inline">\(\hat p(x)\)</span> via predictions <span class="math inline">\(\hat y=1\big(\hat p(x)&gt;s\big)\)</span> as <span class="math inline">\(s\)</span> varies (<span class="math inline">\(s\)</span> is the cut-off; the score is the share of 1s in the leaf of <span class="math inline">\(x\)</span>).</li>
+<li>TP (true positives): % of <span class="math inline">\(y=1\)</span> correctly classified. FP (false positives): % of <span class="math inline">\(y=0\)</span> incorrectly classified. N: % classified as 1.</li>
+<li>All three quantities go from 1 to 0 as <span class="math inline">\(s\)</span> goes from 0 to 1:</li>
+</ul>
+
+<img data-src="media/image36.png" class="quarto-figure quarto-figure-center r-stretch" style="width:76.0%"><div class="guide">
+<p>Worked point (deviance tree, test data, <span class="math inline">\(s=0.5\)</span>): <span style="white-space:nowrap">TP <span class="math inline">\(=198/735=0.27\)</span>,</span> <span style="white-space:nowrap">FP <span class="math inline">\(=128/1180=0.11\)</span>,</span> <span style="white-space:nowrap">N <span class="math inline">\(=326/1915=0.17\)</span>:</span> the first kinks of the next slide’s curves. (NDev, TPDev, FPDev = N, TP, FP.)</p>
+</div>
+</section>
+<section class="slide level1">
+<h1>4) Lift and ROC</h1>
+
+<img data-src="media/image37.png" class="quarto-figure quarto-figure-center r-stretch" style="width:70.0%"><ul>
+<li>ROC plots TP against FP.</li>
+<li>Lift (also called a cumulative gains chart) plots TP against N: at the same share classified as 1, higher TP is better.</li>
+<li><span class="math inline">\(s\)</span> is decreasing as we move from left to right in each plot.</li>
+<li>The 45-degree line represents random guessing (a score unrelated to <span class="math inline">\(y\)</span>).</li>
+<li>Sometimes we use the area under the curve (AUC) to summarize overall performance. Higher AUC is better.</li>
+</ul>
+</section>
+<section class="slide level1">
+<h1>4) Lift in 401(k) data</h1>
+
+<img data-src="media/image38.png" class="quarto-figure quarto-figure-center r-stretch" style="width:44.0%"><ul>
+<li>Deviance, L2 (squared loss) and logit nearly coincide; Gini is coarser.</li>
+</ul>
+</section>
+<section class="slide level1">
+<h1>5) Concluding remarks</h1>
+<ul>
+<li>Tree-based methods provide a benchmark in many modern machine learning / big data settings.</li>
+<li>Small trees are simple to interpret, scalable, and give reasonable (if rarely the best) predictions “off-the-shelf”.</li>
+<li>They perform variable selection and detect nonlinearities and interactions <em>without careful user specification</em>.</li>
+<li>In the 401(k) example, the CV-pruned trees (3–8 leaves) all reduce to one rule, predict 1 if income &gt; ≈$57,000: 665/1915 test errors vs.&nbsp;651 for logit and 735 for predicting 0.</li>
+<li>They may underperform in prediction in their basic form; tree size is typically chosen by CV-based pruning.</li>
+<li>They may be unstable: a small change in data can result in a large change in the estimated tree. <em>Next: bagging and random forests reduce this instability; boosting mainly improves accuracy.</em></li>
+</ul>
+
+</section>
+    </div>
+  <div class="quarto-auto-generated-content" style="display: none;">
+<div class="footer footer-default">
+
+</div>
+</div></div>
+
+  <script>window.backupDefine = window.define; window.define = undefined;</script>
+  <script src="chapter6_files/libs/revealjs/dist/reveal.js"></script>
+  <!-- reveal.js plugins -->
+  <script src="chapter6_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.js"></script>
+  <script src="chapter6_files/libs/revealjs/plugin/pdf-export/pdfexport.js"></script>
+  <script src="chapter6_files/libs/revealjs/plugin/reveal-menu/menu.js"></script>
+  <script src="chapter6_files/libs/revealjs/plugin/reveal-menu/quarto-menu.js"></script>
+  <script src="chapter6_files/libs/revealjs/plugin/quarto-support/support.js"></script>
+  
+
+  <script src="chapter6_files/libs/revealjs/plugin/notes/notes.js"></script>
+  <script src="chapter6_files/libs/revealjs/plugin/search/search.js"></script>
+  <script src="chapter6_files/libs/revealjs/plugin/zoom/zoom.js"></script>
+  <script src="chapter6_files/libs/revealjs/plugin/math/math.js"></script>
+  <script>window.define = window.backupDefine; window.backupDefine = undefined;</script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+'controlsAuto': true,
+'previewLinksAuto': false,
+'pdfSeparateFragments': false,
+'autoAnimateEasing': "ease",
+'autoAnimateDuration': 1,
+'autoAnimateUnmatched': true,
+'jumpToSlide': true,
+'menu': {"side":"left","useTextContentForMissingTitles":true,"markers":false,"loadIcons":false,"custom":[{"title":"Tools","icon":"<i class=\"fas fa-gear\"></i>","content":"<ul class=\"slide-menu-items\">\n<li class=\"slide-tool-item active\" data-item=\"0\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.fullscreen(event)\"><kbd>f</kbd> Fullscreen</a></li>\n<li class=\"slide-tool-item\" data-item=\"1\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.speakerMode(event)\"><kbd>s</kbd> Speaker View</a></li>\n<li class=\"slide-tool-item\" data-item=\"2\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.overview(event)\"><kbd>o</kbd> Slide Overview</a></li>\n<li class=\"slide-tool-item\" data-item=\"3\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.togglePdfExport(event)\"><kbd>e</kbd> PDF Export Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"4\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.toggleScrollView(event)\"><kbd>r</kbd> Scroll View Mode</a></li>\n<li class=\"slide-tool-item\" data-item=\"5\"><a href=\"#\" onclick=\"RevealMenuToolHandlers.keyboardHelp(event)\"><kbd>?</kbd> Keyboard Help</a></li>\n</ul>"}],"openButton":true},
+'smaller': false,
+ 
+        // Display controls in the bottom right corner
+        controls: false,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: false,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'edges',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: 'c/t',
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: true,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'linear',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: false,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'slide',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'none',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1280,
+
+        height: 720,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 6.0e-2,
+
+        math: {
+          mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@2.7.9/MathJax.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [QuartoLineHighlight, PdfExport, RevealMenu, QuartoSupport,
+
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    <script id="quarto-html-after-body" type="application/javascript">
+      window.document.addEventListener("DOMContentLoaded", function (event) {
+        const tabsets =  window.document.querySelectorAll(".panel-tabset-tabby")
+        tabsets.forEach(function(tabset) {
+          const tabby = new Tabby('#' + tabset.id);
+        });
+        const isCodeAnnotation = (el) => {
+          for (const clz of el.classList) {
+            if (clz.startsWith('code-annotation-')) {                     
+              return true;
+            }
+          }
+          return false;
+        }
+        const onCopySuccess = function(e) {
+          // button target
+          const button = e.trigger;
+          // don't keep focus
+          button.blur();
+          // flash "checked"
+          button.classList.add('code-copy-button-checked');
+          var currentTitle = button.getAttribute("title");
+          button.setAttribute("title", "Copied!");
+          let tooltip;
+          if (window.bootstrap) {
+            button.setAttribute("data-bs-toggle", "tooltip");
+            button.setAttribute("data-bs-placement", "left");
+            button.setAttribute("data-bs-title", "Copied!");
+            tooltip = new bootstrap.Tooltip(button, 
+              { trigger: "manual", 
+                customClass: "code-copy-button-tooltip",
+                offset: [0, -8]});
+            tooltip.show();    
+          }
+          setTimeout(function() {
+            if (tooltip) {
+              tooltip.hide();
+              button.removeAttribute("data-bs-title");
+              button.removeAttribute("data-bs-toggle");
+              button.removeAttribute("data-bs-placement");
+            }
+            button.setAttribute("title", currentTitle);
+            button.classList.remove('code-copy-button-checked');
+          }, 1000);
+          // clear code selection
+          e.clearSelection();
+        }
+        const getTextToCopy = function(trigger) {
+          const outerScaffold = trigger.parentElement.cloneNode(true);
+          const codeEl = outerScaffold.querySelector('code');
+          for (const childEl of codeEl.children) {
+            if (isCodeAnnotation(childEl)) {
+              childEl.remove();
+            }
+          }
+          return codeEl.innerText;
+        }
+        const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+          text: getTextToCopy
+        });
+        clipboard.on('success', onCopySuccess);
+        if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+          const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+            text: getTextToCopy,
+            container: window.document.getElementById('quarto-embedded-source-code-modal')
+          });
+          clipboardModal.on('success', onCopySuccess);
+        }
+          var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+          var mailtoRegex = new RegExp(/^mailto:/);
+            var filterRegex = new RegExp('/' + window.location.host + '/');
+          var isInternal = (href) => {
+              return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+          }
+          // Inspect non-navigation links and adorn them if external
+         var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+          for (var i=0; i<links.length; i++) {
+            const link = links[i];
+            if (!isInternal(link.href)) {
+              // undo the damage that might have been done by quarto-nav.js in the case of
+              // links that we want to consider external
+              if (link.dataset.originalHref !== undefined) {
+                link.href = link.dataset.originalHref;
+              }
+            }
+          }
+        function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+          const config = {
+            allowHTML: true,
+            maxWidth: 500,
+            delay: 100,
+            arrow: false,
+            appendTo: function(el) {
+                return el.closest('section.slide') || el.parentElement;
+            },
+            interactive: true,
+            interactiveBorder: 10,
+            theme: 'light-border',
+            placement: 'bottom-start',
+          };
+          if (contentFn) {
+            config.content = contentFn;
+          }
+          if (onTriggerFn) {
+            config.onTrigger = onTriggerFn;
+          }
+          if (onUntriggerFn) {
+            config.onUntrigger = onUntriggerFn;
+          }
+            config['offset'] = [0,0];
+            config['maxWidth'] = 700;
+          window.tippy(el, config); 
+        }
+        const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+        for (var i=0; i<noterefs.length; i++) {
+          const ref = noterefs[i];
+          tippyHover(ref, function() {
+            // use id or data attribute instead here
+            let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+            try { href = new URL(href).hash; } catch {}
+            const id = href.replace(/^#\/?/, "");
+            const note = window.document.getElementById(id);
+            if (note) {
+              return note.innerHTML;
+            } else {
+              return "";
+            }
+          });
+        }
+        const findCites = (el) => {
+          const parentEl = el.parentElement;
+          if (parentEl) {
+            const cites = parentEl.dataset.cites;
+            if (cites) {
+              return {
+                el,
+                cites: cites.split(' ')
+              };
+            } else {
+              return findCites(el.parentElement)
+            }
+          } else {
+            return undefined;
+          }
+        };
+        var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+        for (var i=0; i<bibliorefs.length; i++) {
+          const ref = bibliorefs[i];
+          const citeInfo = findCites(ref);
+          if (citeInfo) {
+            tippyHover(citeInfo.el, function() {
+              var popup = window.document.createElement('div');
+              citeInfo.cites.forEach(function(cite) {
+                var citeDiv = window.document.createElement('div');
+                citeDiv.classList.add('hanging-indent');
+                citeDiv.classList.add('csl-entry');
+                var biblioDiv = window.document.getElementById('ref-' + cite);
+                if (biblioDiv) {
+                  citeDiv.innerHTML = biblioDiv.innerHTML;
+                }
+                popup.appendChild(citeDiv);
+              });
+              return popup.innerHTML;
+            });
+          }
+        }
+      });
+      </script>
+    
+
+</body></html>

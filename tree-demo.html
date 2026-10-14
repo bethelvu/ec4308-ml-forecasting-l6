@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prune a regression tree</title>
+<style>
+  :root { --navy:#1F3864; --green:#1F6F2E; --red:#C00000; --mag:#C026D3; --ink:#1a1a1a; --mute:#64748b; --line:#cbd5e1; --bg:#ffffff; --panel:#f8fafc; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:8px 12px 2px; background:var(--bg); color:var(--ink); font:15px/1.35 "Segoe UI", system-ui, -apple-system, sans-serif; }
+  h2 { margin:0 0 4px; font-size:16px; color:var(--navy); }
+  .sub { color:var(--mute); font-size:13.5px; margin-bottom:6px; }
+  .grid { display:grid; grid-template-columns: 1.25fr 1fr; gap:10px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:6px 8px; }
+  .card h3 { margin:0 0 2px; font-size:13.5px; color:var(--navy); font-weight:600; }
+  canvas, svg { display:block; width:100%; }
+  .controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px 16px; margin:8px 0 6px; }
+  .controls label { font-size:13px; color:var(--navy); font-weight:600; }
+  input[type=range] { width:260px; accent-color:var(--green); vertical-align:middle; }
+  select, button { font:inherit; font-size:13px; padding:3px 8px; border:1px solid var(--line); border-radius:4px; background:#fff; color:var(--ink); cursor:pointer; }
+  button { background:var(--green); color:#fff; border-color:var(--green); }
+  button.alt { background:#fff; color:var(--green); }
+  .stats { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13px; }
+  .stats b { color:var(--navy); }
+  .stats .test b { color:var(--red); }
+  .note { font-size:12px; color:var(--mute); margin-top:4px; }
+  #tree { max-height: 160px; }
+  .tasks { font-size:13.5px; color:var(--ink); background:#f0f7f0; border-left:3px solid var(--green); padding:3px 8px; margin:2px 0 6px; }
+  @media (max-width: 760px) { .grid { grid-template-columns:1fr; } input[type=range]{ width:180px; } }
+</style>
+</head>
+<body>
+<h2>Grow big, then prune back: cost-complexity pruning in action</h2>
+<div class="sub">Simulated data shaped like Boston <i>medv</i> vs <i>lstat</i>. CART grows a big tree on the training sample (black dots), then weakest-link pruning gives the nested subtrees that minimize RSS + &alpha;&middot;|T|. Test points (grey) are never used for fitting.</div>
+<div class="tasks"><b>Try:</b> (1) slide &alpha; to 0: the full big tree chases the noise, so train MSE falls while test MSE typically rises. (2) Click <i>New training sample</i> a few times (&alpha; stays fixed): the split points jump around, since trees are unstable. (3) Each larger &alpha; gives a subtree of the previous one (nesting). The oracle button uses the test set, which you would not have in practice: there, choose &alpha; by cross-validation.</div>
+
+<div class="controls">
+  <label for="alpha">Penalty &alpha; (log scale)</label>
+  <input id="alpha" type="range" min="0" max="1000" value="620">
+  <span id="alphaTxt"></span>
+  <label for="minleaf">Min. obs. per child node</label>
+  <select id="minleaf"><option>3</option><option selected>5</option><option>10</option><option>20</option></select>
+  <button id="resample" title="Draw a new training sample from the same model">New training sample</button>
+  <button id="best" class="alt" title="Uses the test set, which you would not have in practice; choose alpha by cross-validation">Oracle: test-MSE minimum</button>
+</div>
+<div class="stats">
+  <span>Leaves |T| = <b id="leaves"></b></span>
+  <span>Train MSE = <b id="trmse"></b></span>
+  <span class="test">Test MSE = <b id="temse"></b></span>
+  <span>Big tree: <b id="bigleaves"></b> leaves</span>
+</div>
+
+<div class="grid" style="margin-top:8px">
+  <div class="card">
+    <h3>Fitted step function (red) and split points (dashed)</h3>
+    <canvas id="fit" width="640" height="140"></canvas>
+  </div>
+  <div class="card">
+    <h3>Error along the pruning sequence</h3>
+    <canvas id="err" width="520" height="140"></canvas>
+  </div>
+</div>
+<div class="card" style="margin-top:10px">
+  <h3 id="treeTitle">The pruned tree (go left if lstat &lt; c)</h3>
+  <svg id="tree" viewBox="0 0 1000 210" preserveAspectRatio="xMidYMid meet"></svg>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  // ---------- seeded RNG (mixed LCG; modulus computed, not typed) ----------
+  var M = Math.pow(2, 31) - 1, seed = 20261014;
+  function rnd() { seed = (seed * 48271 + 12345) % M; return seed / M; }
+  function rnorm() { var u = Math.max(rnd(), 1e-12), v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+
+  var XMIN = 1.5, XMAX = 38, YMIN = 0, YMAX = 55;
+  function truth(x) { return 9 + 42 * Math.exp(-x / 6.5) + 0.06 * x; }
+  function draw(n) {
+    var d = [];
+    for (var i = 0; i < n; i++) {
+      var x = XMIN + (XMAX - XMIN) * Math.pow(rnd(), 1.35);
+      var y = truth(x) + 4.2 * rnorm();
+      d.push({ x: x, y: Math.min(YMAX - 0.5, Math.max(YMIN + 0.5, y)) });
+    }
+    return d.sort(function (a, b) { return a.x - b.x; });
+  }
+
+  // ---------- CART on one predictor ----------
+  function sse(ys) { var m = 0, s = 0, i; for (i = 0; i < ys.length; i++) m += ys[i]; m /= ys.length; for (i = 0; i < ys.length; i++) s += (ys[i] - m) * (ys[i] - m); return s; }
+  function grow(pts, minLeaf) {
+    var ys = pts.map(function (p) { return p.y; });
+    var node = { n: pts.length, mean: ys.reduce(function (a, b) { return a + b; }, 0) / pts.length, sse: sse(ys), lo: pts[0].x, hi: pts[pts.length - 1].x };
+    if (pts.length < 2 * minLeaf) return node;
+    // prefix sums for O(n) best split (pts sorted by x)
+    var n = pts.length, s1 = [0], s2 = [0];
+    for (var i = 0; i < n; i++) { s1.push(s1[i] + pts[i].y); s2.push(s2[i] + pts[i].y * pts[i].y); }
+    var best = node.sse - 1e-9, at = -1;
+    for (var k = minLeaf; k <= n - minLeaf; k++) {
+      if (pts[k - 1].x === pts[k].x) continue;
+      var nl = k, nr = n - k;
+      var l = s2[k] - s1[k] * s1[k] / nl, r = (s2[n] - s2[k]) - (s1[n] - s1[k]) * (s1[n] - s1[k]) / nr;
+      if (l + r < best) { best = l + r; at = k; }
+    }
+    if (at < 0) return node;
+    node.cut = (pts[at - 1].x + pts[at].x) / 2;
+    node.left = grow(pts.slice(0, at), minLeaf);
+    node.right = grow(pts.slice(at), minLeaf);
+    return node;
+  }
+
+  // ---------- weakest-link pruning: alpha at which each internal node collapses ----------
+  function leavesOf(t, a) { return (!t.left || t.pruneAt <= a) ? 1 : leavesOf(t.left, a) + leavesOf(t.right, a); }
+  function sseOf(t, a) { return (!t.left || t.pruneAt <= a) ? t.sse : sseOf(t.left, a) + sseOf(t.right, a); }
+  function internals(t, a, out) { if (t.left && !(t.pruneAt <= a)) { out.push(t); internals(t.left, a, out); internals(t.right, a, out); } return out; }
+  function prune(root) {
+    var seq = [], a = 0;
+    seq.push({ alpha: 0, leaves: leavesOf(root, -1) });
+    // alpha just below zero keeps the full tree; collapse weakest links one at a time
+    var cur = -1;
+    for (;;) {
+      var nodes = internals(root, cur, []);
+      if (!nodes.length) break;
+      var gmin = Infinity, pick = [];
+      nodes.forEach(function (t) {
+        var g = (t.sse - sseOf(t, cur)) / (leavesOf(t, cur) - 1);
+        if (g < gmin - 1e-9) { gmin = g; pick = [t]; } else if (Math.abs(g - gmin) <= 1e-9) pick.push(t);
+      });
+      a = Math.max(a, gmin);
+      pick.forEach(function (t) { t.pruneAt = a; });
+      cur = a;
+      seq.push({ alpha: a, leaves: leavesOf(root, a) });
+    }
+    return seq;
+  }
+  function predict(t, x, a) { while (t.left && !(t.pruneAt <= a)) t = x < t.cut ? t.left : t.right; return t.mean; }
+  function mse(t, d, a) { var s = 0; d.forEach(function (p) { var e = p.y - predict(t, p.x, a); s += e * e; }); return s / d.length; }
+  function cuts(t, a, out) { if (t.left && !(t.pruneAt <= a)) { out.push(t.cut); cuts(t.left, a, out); cuts(t.right, a, out); } return out; }
+
+  // ---------- state ----------
+  var test = draw(400), train, root, seq, amax;
+  var el = function (id) { return document.getElementById(id); };
+  function refit() {
+    root = grow(train, +el("minleaf").value);
+    seq = prune(root);
+    seq.forEach(function (s) { s.tr = mse(root, train, s.alpha); s.te = mse(root, test, s.alpha); });
+    amax = Math.max(seq[seq.length - 1].alpha * 1.3, 1);
+    el("bigleaves").textContent = seq[0].leaves;
+  }
+  var A0 = 0.01;
+  function sliderToAlpha(v) { return v <= 0 ? 0 : A0 * Math.pow(amax / A0, v / 1000); }
+  function alphaToSlider(a) { return a <= A0 ? 0 : Math.round(1000 * Math.log(a / A0) / Math.log(amax / A0)); }
+
+  // ---------- drawing helpers ----------
+  function setup(c) {
+    if (!c._aspect) c._aspect = c.height / c.width;          // from the HTML attributes, before any resize
+    var r = window.devicePixelRatio || 1, w = c.clientWidth, h = Math.round(w * c._aspect);
+    if (!w) return null;                                       // hidden (e.g. slide not shown yet)
+    if (c._w !== w) { c._w = w; c.style.height = h + "px"; c.width = w * r; c.height = h * r; c._r = r; c._cw = w; c._ch = h; }
+    var g = c.getContext("2d"); g.setTransform(c._r, 0, 0, c._r, 0, 0); g.clearRect(0, 0, c._cw, c._ch); return g;
+  }
+  function axes(g, W, H, P, xl, yl, xt, yt, sx, sy) {
+    g.strokeStyle = "#94a3b8"; g.lineWidth = 1; g.strokeRect(P.l, P.t, W - P.l - P.r, H - P.t - P.b);
+    g.fillStyle = "#475569"; g.font = "11px Segoe UI, sans-serif"; g.textAlign = "center";
+    xt.forEach(function (v) { g.fillText(v.lab || v, sx(v.v !== undefined ? v.v : v), H - P.b + 14); });
+    g.textAlign = "right"; yt.forEach(function (v) { g.fillText(v, P.l - 5, sy(v) + 4); });
+    g.textAlign = "center"; g.fillStyle = "#1F3864"; g.font = "12px Segoe UI, sans-serif"; g.fillText(xl, (P.l + W - P.r) / 2, H - 4);
+    g.save(); g.translate(12, (P.t + H - P.b) / 2); g.rotate(-Math.PI / 2); g.fillText(yl, 0, 0); g.restore();
+  }
+
+  function drawFit(a) {
+    var c = el("fit"), g = setup(c), W = c._cw, H = c._ch, P = { l: 40, r: 10, t: 8, b: 34 };
+    if (!g) return;
+    var sx = function (x) { return P.l + (x - 0) / 40 * (W - P.l - P.r); }, sy = function (y) { return H - P.b - (y - YMIN) / (YMAX - YMIN) * (H - P.t - P.b); };
+    axes(g, W, H, P, "lstat (x)", "medv (y)", [0, 10, 20, 30, 40], [0, 10, 20, 30, 40, 50], sx, sy);
+    g.fillStyle = "rgba(100,116,139,0.28)"; test.forEach(function (p) { g.fillRect(sx(p.x) - 1, sy(p.y) - 1, 2.2, 2.2); });
+    g.fillStyle = "#111"; train.forEach(function (p) { g.beginPath(); g.arc(sx(p.x), sy(p.y), 2.3, 0, 7); g.fill(); });
+    g.setLineDash([4, 3]); g.strokeStyle = "#C026D3"; g.lineWidth = 1;
+    cuts(root, a, []).forEach(function (cx) { g.beginPath(); g.moveTo(sx(cx), P.t); g.lineTo(sx(cx), H - P.b); g.stroke(); });
+    g.setLineDash([]); g.strokeStyle = "#C00000"; g.lineWidth = 2.4; g.beginPath();
+    var prev = null;
+    for (var px = sx(XMIN); px <= sx(XMAX); px += 0.5) {
+      var x = (px - P.l) / (W - P.l - P.r) * 40, y = predict(root, x, a);
+      if (prev === null) g.moveTo(px, sy(y)); else { g.lineTo(px, sy(prev)); g.lineTo(px, sy(y)); }
+      prev = y;
+    }
+    g.stroke();
+  }
+
+  function drawErr(a) {
+    var c = el("err"), g = setup(c), W = c._cw, H = c._ch, P = { l: 40, r: 10, t: 8, b: 34 };
+    if (!g) return;
+    var Lmax = seq[0].leaves, lx = function (L) { return P.l + Math.log(L) / Math.log(Math.max(Lmax, 2)) * (W - P.l - P.r); };
+    var hi = 0; seq.forEach(function (s) { hi = Math.max(hi, s.te, s.tr); }); hi = Math.ceil(hi / 10) * 10;
+    var sy = function (v) { return H - P.b - v / hi * (H - P.t - P.b); };
+    var ticks = [1, 2, 5, 10, 20, 50].filter(function (t) { return t <= Lmax; }).map(function (t) { return { v: t, lab: String(t) }; });
+    var yt = []; for (var v = 0; v <= hi; v += hi / 5) yt.push(Math.round(v));
+    axes(g, W, H, P, "number of leaves |T| (log scale)", "MSE", ticks, yt, function (t) { return lx(t); }, sy);
+    [["tr", "#1F3864", "train"], ["te", "#C00000", "test"]].forEach(function (k, j) {
+      g.strokeStyle = k[1]; g.lineWidth = 2; g.beginPath();
+      seq.slice().reverse().forEach(function (s, i) { var X = lx(s.leaves), Y = sy(s[k[0]]); if (i) g.lineTo(X, Y); else g.moveTo(X, Y); });
+      g.stroke(); g.fillStyle = k[1]; g.font = "12px Segoe UI, sans-serif"; g.textAlign = "left"; g.fillText(k[2], W - P.r - 50, P.t + 14 + 15 * j);
+    });
+    var L = leavesOf(root, a), te = mse(root, test, a);
+    g.strokeStyle = "#1F6F2E"; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(lx(L), P.t); g.lineTo(lx(L), H - P.b); g.stroke(); g.setLineDash([]);
+    g.fillStyle = "#1F6F2E"; g.beginPath(); g.arc(lx(L), sy(te), 5, 0, 7); g.fill();
+  }
+
+  function drawTree(a) {
+    var svg = el("tree"), L = leavesOf(root, a), ns = "http://www.w3.org/2000/svg";
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var MAXL = 14;
+    el("treeTitle").textContent = L <= MAXL ? "The pruned tree (go left if lstat < c; leaves show the mean of y)" : "The pruned tree: " + L + " leaves, too many to draw legibly. Increase α to see it.";
+    if (L > MAXL) { svg.setAttribute("viewBox", "0 0 1000 40"); return; }
+    var depth = function (t) { return (!t.left || t.pruneAt <= a) ? 0 : 1 + Math.max(depth(t.left), depth(t.right)); }, D = depth(root);
+    var H = 40 + 46 * Math.max(D, 1); svg.setAttribute("viewBox", "0 0 1000 " + H);
+    var k = 0;
+    function place(t, d) {
+      if (!t.left || t.pruneAt <= a) { t._x = 40 + (k++ + 0.5) * 920 / L; t._y = 20 + d * 46; return; }
+      place(t.left, d + 1); place(t.right, d + 1); t._x = (t.left._x + t.right._x) / 2; t._y = 20 + d * 46;
+    }
+    place(root, 0);
+    function mk(tag, at, txt) { var e = document.createElementNS(ns, tag); for (var q in at) e.setAttribute(q, at[q]); if (txt !== undefined) e.textContent = txt; svg.appendChild(e); return e; }
+    (function edges(t) {
+      if (!t.left || t.pruneAt <= a) return;
+      [t.left, t.right].forEach(function (c) { mk("path", { d: "M" + t._x + "," + (t._y + 8) + " V" + (t._y + 24) + " H" + c._x + " V" + (c._y - 9), fill: "none", stroke: "#94a3b8", "stroke-width": 1.4 }); edges(c); });
+    })(root);
+    (function nodes(t) {
+      if (!t.left || t.pruneAt <= a) {
+        mk("rect", { x: t._x - 26, y: t._y - 10, width: 52, height: 20, rx: 3, fill: "#e8f3ea", stroke: "#1F6F2E" });
+        mk("text", { x: t._x, y: t._y + 4.5, "text-anchor": "middle", "font-size": 15, fill: "#1F6F2E", "font-weight": 600 }, t.mean.toFixed(1));
+        return;
+      }
+      mk("text", { x: t._x, y: t._y + 4, "text-anchor": "middle", "font-size": 15, fill: "#1F3864", "font-weight": 600 }, "lstat < " + t.cut.toFixed(2));
+      nodes(t.left); nodes(t.right);
+    })(root);
+  }
+
+  // fixedA holds an exact alpha (after a resample or the oracle jump) until the slider is moved,
+  // so the slider's 1/1000 log-scale rounding never changes the subtree shown.
+  var fixedA = null;
+  function currentAlpha() { return fixedA !== null ? fixedA : sliderToAlpha(+el("alpha").value); }
+  function render() {
+    var a = currentAlpha();
+    el("alphaTxt").textContent = "α = " + (a < 1 ? a.toFixed(2) : a.toFixed(1)) +
+      "  (cp = α / RSS of root = " + (a / root.sse).toFixed(4) + ")";
+    el("leaves").textContent = leavesOf(root, a);
+    el("trmse").textContent = mse(root, train, a).toFixed(2);
+    el("temse").textContent = mse(root, test, a).toFixed(2);
+    drawFit(a); drawErr(a); drawTree(a);
+  }
+  function holdAlpha(a) {            // keep alpha exactly; move the slider to the nearest position
+    fixedA = a;
+    el("alpha").value = alphaToSlider(Math.min(a, amax));
+  }
+  function newSample() {
+    var keep = root ? currentAlpha() : null;   // same alpha across resamples (instability demo)
+    train = draw(150); refit();
+    if (keep !== null) holdAlpha(keep);
+    render();
+  }
+
+  el("alpha").addEventListener("input", function () { fixedA = null; render(); });
+  el("minleaf").addEventListener("change", function () { var keep = currentAlpha(); refit(); holdAlpha(keep); render(); });
+  el("resample").addEventListener("click", newSample);
+  el("best").addEventListener("click", function () {
+    var b = seq[0]; seq.forEach(function (s) { if (s.te < b.te) b = s; });
+    var i = seq.indexOf(b), hiA = i + 1 < seq.length ? seq[i + 1].alpha : amax;
+    holdAlpha(hiA > A0 ? Math.sqrt(Math.max(b.alpha, A0) * hiA) : (b.alpha + hiA) / 2); render();
+  });
+  window.addEventListener("resize", render);
+  // Inside a RevealJS deck the iframe loads while its slide is hidden (0 px wide);
+  // redraw whenever a canvas gets a new size so the plots appear when the slide is shown.
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(function () { if (root) render(); });
+    ro.observe(el("fit")); ro.observe(el("err"));
+  }
+  // Fallback: ResizeObserver does not always fire when a hidden RevealJS slide is revealed.
+  setInterval(function () {
+    var c = el("fit");
+    if (root && c.clientWidth && c._w !== c.clientWidth) render();
+  }, 400);
+  // stop arrow keys inside the widget from moving the parent RevealJS deck
+  document.addEventListener("keydown", function (e) { if (/Arrow/.test(e.key) && e.target.tagName === "INPUT") e.stopPropagation(); });
+  newSample();
+})();
+</script>
+</body>
+</html>
