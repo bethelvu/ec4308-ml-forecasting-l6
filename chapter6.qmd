@@ -430,6 +430,12 @@ Choices for the node loss $L_m$:
 Worked example (binary node, natural log): $p=0.2$ gives misclassification $0.2$, Gini $2(0.2)(0.8)=0.32$, entropy $\approx 0.50$; at $p=0.5$ all three peak ($0.5$, $0.5$, $\log 2\approx0.69$).
 :::
 
+# Interactive: grow a classification tree, watch Gini and cross-entropy fall {.companion-only}
+
+Two interleaved classes; CART picks the split that most reduces weighted impurity. Step through the splits and switch the curve between **Gini** and **cross-entropy** to see the loss concepts above in action. Try lowering *min. obs. per leaf* and growing all the way: the boundary overfits and train error collapses — an intuition for pruning (next section).
+
+<iframe src="classifier-demo.html" width="100%" height="760" style="border:none;" title="Interactive classification tree: recursive splitting and Gini vs cross-entropy impurity"></iframe>
+
 # 4) Common loss functions: comments
 
 - Misclassification error is not differentiable and is relatively insensitive to changes in node probabilities, so it is not recommended for growing the tree.

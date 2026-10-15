@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Classification tree: Gini vs cross-entropy impurity</title>
+<style>
+  :root { --navy:#1F3864; --green:#1F6F2E; --red:#C00000; --mag:#C026D3; --ink:#1a1a1a; --mute:#64748b; --line:#cbd5e1; --bg:#ffffff; --panel:#f8fafc; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:8px 12px 2px; background:var(--bg); color:var(--ink); font:15px/1.35 "Segoe UI", system-ui, -apple-system, sans-serif; }
+  h2 { margin:0 0 4px; font-size:16px; color:var(--navy); }
+  .sub { color:var(--mute); font-size:13.5px; margin-bottom:6px; }
+  .grid { display:grid; grid-template-columns:1.3fr 1fr; gap:10px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:6px 8px; }
+  .card h3 { margin:0 0 2px; font-size:13.5px; color:var(--navy); font-weight:600; }
+  canvas, svg { display:block; width:100%; }
+  .controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; margin:8px 0 6px; }
+  .controls label { font-size:13px; color:var(--navy); font-weight:600; }
+  input[type=range] { width:250px; accent-color:var(--green); vertical-align:middle; }
+  select, button { font:inherit; font-size:13px; padding:3px 8px; border:1px solid var(--line); border-radius:4px; background:#fff; color:var(--ink); cursor:pointer; }
+  button { background:var(--green); color:#fff; border-color:var(--green); }
+  button.alt { background:#fff; color:var(--green); }
+  .stats { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13px; }
+  .stats b { color:var(--navy); }
+  .stats .test b { color:var(--red); }
+  .note { font-size:12px; color:var(--mute); margin-top:4px; }
+  .legend { display:flex; flex-wrap:wrap; gap:12px; font-size:12.5px; margin-top:2px; }
+  .legend .c0::before{ content:""; display:inline-block; width:9px; height:9px; border-radius:50%; background:#1F6F2E; margin-right:4px; }
+  .legend .c1::before{ content:""; display:inline-block; width:9px; height:9px; border-radius:50%; background:#C026D3; margin-right:4px; }
+  @media (max-width: 760px) { .grid { grid-template-columns:1fr; } input[type=range]{ width:180px; } }
+</style>
+</head>
+<body>
+<h2>Recursive splitting on a classification problem: watch impurity fall</h2>
+<div class="sub">Two classes drawn from interleaved Gaussian clouds. CART greedily chooses, at every leaf, the predictor and threshold that most reduce weighted impurity. The decision boundary grows one split at a time; the right panel traces the tree&#8217;s weighted impurity and both the training and held-out (test) error over the same split sequence. <b>Splits are always chosen by the Gini index;</b> the metric dropdown only changes which impurity curve is drawn.</div>
+<div class="legend"><span class="c0">Class 0</span><span class="c1">Class 1</span></div>
+
+<div class="controls">
+  <label for="mleaf">Min. obs. per leaf</label>
+  <select id="mleaf"><option>1</option><option selected>3</option><option>5</option><option>10</option><option>20</option><option>40</option></select>
+  <label for="imp">Impurity curve</label>
+  <select id="imp"><option value="gini">Gini</option><option value="entropy">Cross-entropy</option></select>
+  <button id="step">+ Next split</button>
+  <button id="grow" class="alt">Grow all</button>
+  <button id="resample">New data</button>
+</div>
+<div class="stats">
+  <span>Splits = <b id="nsplit">0</b></span>
+  <span>Leaves = <b id="nleaf">1</b></span>
+  <span>Weighted Gini = <b id="giniV"></b></span>
+  <span>Weighted cross-entropy = <b id="entV"></b></span>
+  <span>Train error = <b id="trV"></b></span>
+  <span class="test">Test error = <b id="teV"></b></span>
+</div>
+
+<div class="grid" style="margin-top:8px">
+  <div class="card">
+    <h3>Partition — split lines in split order (dots = test points)</h3>
+    <canvas id="part" width="640" height="430"></canvas>
+  </div>
+  <div class="card">
+    <h3>Error and impurity as splits are added</h3>
+    <canvas id="impc" width="520" height="230"></canvas>
+    <div class="note">Grey = not yet grown. Test error (red) is computed on points the tree has never seen; its rise after optimal size signals overfitting.</div>
+  </div>
+</div>
+<div class="card" style="margin-top:10px">
+  <h3 id="treeTitle">Leaves so far (each: n, n<sub>1</sub>, Gini)</h3>
+  <svg id="tree" viewBox="0 0 1000 240" preserveAspectRatio="xMidYMid meet"></svg>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var M = Math.pow(2, 31) - 1, seed = 20261015;
+  function rnd() { seed = (seed * 48271 + 12345) % M; return seed / M; }
+  function rnorm() { var u = Math.max(rnd(), 1e-12), v = rnd(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+
+  function gini(p) { return 2 * p * (1 - p); }
+  function entropy(p) { if (p <= 0 || p >= 1) return 0; return -(p * Math.log(p) + (1 - p) * Math.log(1 - p)); }
+
+  var TRAIN_N = 170, TEST_N = 90; // total 260 split into train + held-out test
+  var PTS = [], TEST = [];
+  var minLeaf = 3;
+  var metric = 'gini';
+  var shown = 0;
+  var orderNodes = [];
+  var treeRoot = null;
+
+  function genData() {
+    var build = [];   // train
+    var tst = [];     // test
+    function one() {
+      var label = (rnd() < 0.5) ? 0 : 1;
+      // Two strongly overlapping clouds: the decision boundary is genuinely noisy,
+      // so an over-deep tree memorizes sampling noise and test error can rise.
+      var cx = label === 0 ? 3.5 : 5.2, cy = label === 0 ? 3.5 : 5.6;
+      return { x: Math.max(0.2, Math.min(9.8, cx + 1.85 * rnorm())),
+               y: Math.max(0.2, Math.min(9.8, cy + 1.85 * rnorm())), c: label };
+    }
+    var i;
+    for (i = 0; i < TRAIN_N; i++) build.push(one());
+    for (i = 0; i < TEST_N; i++) tst.push(one());
+    return { build: build, tst: tst };
+  }
+
+  function count1(ids) { var c = 0; for (var i = 0; i < ids.length; i++) if (PTS[ids[i]].c === 1) c++; return c; }
+  function makeNode(ids) { var n1 = count1(ids); return { ids: ids, n1: n1, p: n1 / ids.length, child: [], splitIdx: -1 }; }
+  function EACH() { var a = []; for (var i = 0; i < TRAIN_N; i++) a.push(i); return a; }
+
+  function bestSplit(ids) {
+    var n = ids.length, n1 = count1(ids);
+    if (n1 === 0 || n1 === n || n < 2 * minLeaf) return null;  // enforce min_samples_leaf: both children >= minLeaf
+    var best = null;
+    function score(coord, thr) {
+      var l = 0, l1 = 0, r = 0, r1 = 0;
+      for (var i = 0; i < n; i++) {
+        var v = (coord === 0) ? PTS[ids[i]].x : PTS[ids[i]].y;
+        if (v < thr) { l++; if (PTS[ids[i]].c === 1) l1++; } else { r++; if (PTS[ids[i]].c === 1) r1++; }
+      }
+      if (l < minLeaf || r < minLeaf) return null;           // reject child splits smaller than minLeaf
+      return { g: (l / n) * gini(l1 / l) + (r / n) * gini(r1 / r) };
+    }
+    for (var ci = 0; ci < 2; ci++) {
+      var coord = ci;
+      var vals = [];
+      for (var i = 0; i < n; i++) vals.push((coord === 0) ? PTS[ids[i]].x : PTS[ids[i]].y);
+      vals.sort(function (a, b) { return a - b; });
+      for (var i = 0; i < vals.length - 1; i++) {
+        var thr = (vals[i] + vals[i + 1]) / 2;
+        var g2 = score(coord, thr);
+        if (g2 !== null && (!best || g2.g < best.g - 1e-12)) best = { coord: coord, thr: thr, g: g2.g, l: 0, r: 0 };
+      }
+    }
+    return best;
+  }
+
+  function buildWholeTree() {
+    function rec(node) {
+      var sp = bestSplit(node.ids);
+      if (!sp) { node.splitIdx = -1; return; }
+      node.coord = sp.coord; node.thr = sp.thr;
+      var leftIds = [], rightIds = [];
+      for (var i = 0; i < node.ids.length; i++) {
+        var v = (node.coord === 0) ? PTS[node.ids[i]].x : PTS[node.ids[i]].y;
+        (v < node.thr ? leftIds : rightIds).push(node.ids[i]);
+      }
+      node.child = [makeNode(leftIds), makeNode(rightIds)];
+      rec(node.child[0]); rec(node.child[1]);
+    }
+    treeRoot = makeNode(EACH());
+    rec(treeRoot);
+    orderNodes = [];
+    var q = [treeRoot];
+    while (q.length) {
+      var nd = q.shift();
+      if (nd.child && nd.child.length) { nd.splitIdx = orderNodes.length; orderNodes.push(nd); q.push(nd.child[0]); q.push(nd.child[1]); }
+    }
+    shown = 0;
+  }
+
+  // ---------- drawing ----------
+  var partC = document.getElementById('part').getContext('2d');
+  var impC = document.getElementById('impc').getContext('2d');
+  var treeSvg = document.getElementById('tree');
+  function X2P(x) { return x / 10 * 640; }
+  function Y2P(y) { return 430 - y / 10 * 430; }
+
+  function revealedRegions() {
+    var leaves = [];
+    (function walk(node) {
+      var isSplit = node.splitIdx >= 0 && node.splitIdx < shown;
+      if (!isSplit) { leaves.push(node); return; }
+      walk(node.child[0]); walk(node.child[1]);
+    })(treeRoot);
+    return leaves;
+  }
+
+  function drawPartition() {
+    partC.clearRect(0, 0, 640, 430);
+    partC.fillStyle = '#fff'; partC.fillRect(0, 0, 640, 430);
+    // test points as hollow dots first
+    for (var i = 0; i < TEST.length; i++) {
+      partC.beginPath(); partC.arc(X2P(TEST[i].x), Y2P(TEST[i].y), 3, 0, 6.2832);
+      partC.fillStyle = TEST[i].c === 0 ? '#1F6F2E' : '#C026D3'; partC.fill();
+      partC.lineWidth = 1.5; partC.strokeStyle = '#fff'; partC.stroke();
+    }
+    for (var j = 0; j < PTS.length; j++) {
+      partC.beginPath(); partC.arc(X2P(PTS[j].x), Y2P(PTS[j].y), 3, 0, 6.2832);
+      partC.fillStyle = PTS[j].c === 0 ? '#1F6F2E' : '#C026D3'; partC.fill();
+    }
+    partC.strokeStyle = '#7f8ea3'; partC.lineWidth = 2;
+    for (var s = 0; s < shown; s++) {
+      var nd = orderNodes[s];
+      partC.beginPath();
+      if (nd.coord === 0) { partC.moveTo(X2P(nd.thr), 0); partC.lineTo(X2P(nd.thr), 430); }
+      else { partC.moveTo(0, Y2P(nd.thr)); partC.lineTo(640, Y2P(nd.thr)); }
+      partC.stroke();
+    }
+  }
+
+  function weightedMetric(lvs, fn) {
+    var tot = 0;
+    for (var i = 0; i < lvs.length; i++) { var ids = lvs[i].ids; if (!ids.length) continue; var p = lvs[i].n1 / ids.length; tot += (ids.length / TRAIN_N) * fn(p); }
+    return tot;
+  }
+  // Classify a single point by walking the revealed (first `shown`) tree.
+    function classifyPoint(p, k) {
+      var node = treeRoot, guard = 200;
+      while (node && node.splitIdx >= 0 && node.splitIdx < k && guard-- > 0) {
+        var v = (node.coord === 0) ? p.x : p.y;
+        node = (v < node.thr) ? node.child[0] : node.child[1];
+      }
+      return node && node.ids.length ? ((node.n1 * 2 >= node.ids.length) ? 1 : 0) : null;
+    }
+    function assign(data) {
+    var labels = [];
+    for (var i = 0; i < data.length; i++) labels.push(null);
+    (function walk(node) {
+      var isSplit = node.splitIdx >= 0 && node.splitIdx < shown;
+      if (!isSplit) {
+        for (var i = 0; i < node.ids.length; i++) labels[node.ids[i]] = (node.n1 * 2 >= node.ids.length) ? 1 : 0;
+        return;
+      }
+      walk(node.child[0]); walk(node.child[1]);
+    })(treeRoot);
+    return labels;
+  }
+  function trainErr() { var lab = assign(PTS); var m = 0; for (var i = 0; i < PTS.length; i++) if (lab[i] !== null && lab[i] !== PTS[i].c) m++; return m / PTS.length; }
+  function testErr() {
+    // classify test points by walking the revealed tree
+    var m = 0;
+    for (var i = 0; i < TEST.length; i++) {
+      var p = TEST[i], node = treeRoot, guard = 200;
+      while (node && node.splitIdx >= 0 && node.splitIdx < shown && guard-- > 0) {
+        var v = (node.coord === 0) ? p.x : p.y;
+        node = (v < node.thr) ? node.child[0] : node.child[1];
+      }
+      if (node && node.ids.length && (node.n1 * 2 >= node.ids.length ? 1 : 0) !== p.c) m++;
+    }
+    return m / TEST.length;
+  }
+  function impurityCurveAt(k) {
+    var leaves = [];
+    (function walk(node) { var isSplit = node.splitIdx >= 0 && node.splitIdx < k; if (!isSplit) { leaves.push(node); return; } walk(node.child[0]); walk(node.child[1]); })(treeRoot);
+    return weightedMetric(leaves, metric === 'gini' ? gini : entropy);
+  }
+
+  function drawImpurity() {
+    impC.clearRect(0, 0, 520, 230);
+    impC.fillStyle = '#fff'; impC.fillRect(0, 0, 520, 230);
+    var maxN = Math.max(1, orderNodes.length);
+    var maxV = 1;
+    impC.strokeStyle = '#cbd5e1'; impC.lineWidth = 1;
+    impC.beginPath(); impC.moveTo(30, 16); impC.lineTo(30, 195); impC.lineTo(512, 195); impC.stroke();
+    // y ticks
+    impC.fillStyle = '#94a3b8'; impC.font = '10px Segoe UI';
+    for (var tk = 0; tk <= 6; tk++) { var tv = tk / 6; var ty = 195 - tv * 165; impC.fillText((tv).toFixed(1), 6, ty + 3); impC.beginPath(); impC.moveTo(30, ty); impC.lineTo(512, ty); impC.strokeStyle='#e8edf3'; impC.lineWidth=1; impC.stroke(); }
+    impC.strokeStyle = '#cbd5e1'; impC.lineWidth = 1;
+    if (orderNodes.length === 0) { impC.fillText('Single leaf: no splits to show.', 60, 100); return; }
+    // legend
+    impC.fillStyle = '#1F3864'; impC.font = '11px Segoe UI';
+    impC.fillText(metric === 'gini' ? 'Gini' : 'Cross-entropy', 40, 30); impC.fillRect(180,23,10,3); // sample
+    impC.fillStyle = '#1F6F2E'; impC.fillText('train error', 250, 30);
+    impC.fillStyle = '#C00000'; impC.fillText('test error', 370, 30);
+    // impurity curve
+    for (var k = 0; k <= shown; k++) {
+      var x = 30 + (k / maxN) * 470, v = impurityCurveAt(k), y = 195 - (v / maxV) * 160;
+      impC.fillStyle = '#1F3864'; impC.beginPath(); impC.arc(x, y, 3, 0, 6.2832); impC.fill();
+      if (k > 0) { impC.strokeStyle = '#1F3864'; impC.beginPath(); impC.moveTo(30 + ((k-1)/maxN)*470, 195 - (impurityCurveAt(k-1)/maxV)*160); impC.lineTo(x, y); impC.stroke(); }
+    }
+    // train error + test error curves over k (need k-conditional errors: reconstruct per k)
+    function errsAt(k) {
+      var mT = 0, mS = 0, i;
+      for (i = 0; i < PTS.length; i++) if (classifyPoint(PTS[i], k) !== PTS[i].c) mT++;
+      for (i = 0; i < TEST.length; i++) if (classifyPoint(TEST[i], k) !== TEST[i].c) mS++;
+      return { tr: mT / PTS.length, te: mS / TEST.length };
+    }
+    for (var k = 0; k <= shown; k++) {
+      var e = errsAt(k);
+      var x2 = 30 + (k / maxN) * 470;
+      var yT = 195 - (e.tr / maxV) * 160, yS = 195 - (e.te / maxV) * 160;
+      impC.fillStyle = k <= shown ? '#1F6F2E' : '#b9c4d4'; impC.beginPath(); impC.arc(x2, yT, 3, 0, 6.2832); impC.fill();
+      impC.fillStyle = k <= shown ? '#C00000' : '#e6b3b3'; impC.beginPath(); impC.arc(x2, yS, 3, 0, 6.2832); impC.fill();
+      if (k > 0) {
+        var pe = errsAt(k-1);
+        impC.strokeStyle = k <= shown ? '#1F6F2E' : '#c8d2df'; impC.beginPath(); impC.moveTo(30+((k-1)/maxN)*470, 195-(pe.tr/maxV)*160); impC.lineTo(x2, yT); impC.stroke();
+        impC.strokeStyle = k <= shown ? '#C00000' : '#e6b3b3'; impC.beginPath(); impC.moveTo(30+((k-1)/maxN)*470, 195-(pe.te/maxV)*160); impC.lineTo(x2, yS); impC.stroke();
+      }
+    }
+    impC.fillStyle = '#94a3b8'; impC.font = '10px Segoe UI'; impC.fillText('splits', 478, 210);
+  }
+
+  function drawTree() {
+    treeSvg.innerHTML = '';
+    var leaves = revealedRegions();
+    var lines = [], y = 30, shownCount = 0;
+    for (var i = 0; i < leaves.length; i++) {
+      if (i >= 12) break;
+      shownCount++;
+      var g = gini(leaves[i].n1 / leaves[i].ids.length);
+      lines.push('leaf: n=' + leaves[i].ids.length + ', class1=' + leaves[i].n1 + ', Gini=' + g.toFixed(3));
+    }
+    if (!lines.length) lines.push('Add splits to reveal leaves.');
+    else if (leaves.length > shownCount) lines.push('+ ' + (leaves.length - shownCount) + ' more leaves');
+    for (var i = 0; i < lines.length; i++) {
+      var t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      t.setAttribute('x', 14); t.setAttribute('y', y); t.setAttribute('fill', '#1F3864'); t.setAttribute('font-size', '13');
+      t.textContent = lines[i]; treeSvg.appendChild(t); y += 22;
+    }
+  }
+
+  function updateStats() {
+    var leaves = revealedRegions();
+    document.getElementById('nsplit').textContent = shown;
+    document.getElementById('nleaf').textContent = leaves.length;
+    document.getElementById('giniV').textContent = weightedMetric(leaves, gini).toFixed(3);
+    document.getElementById('entV').textContent = weightedMetric(leaves, entropy).toFixed(3);
+    document.getElementById('trV').textContent = (trainErr() * 100).toFixed(1) + '%';
+    document.getElementById('teV').textContent = (testErr() * 100).toFixed(1) + '%';
+  }
+
+  function draw() { drawPartition(); drawImpurity(); drawTree(); updateStats(); }
+
+  document.getElementById('step').onclick = function () { if (shown < orderNodes.length) { shown++; draw(); } };
+  document.getElementById('grow').onclick = function () { shown = orderNodes.length; draw(); };
+  document.getElementById('resample').onclick = function () { var g = genData(); PTS = g.build; TEST = g.tst; buildWholeTree(); draw(); };
+  document.getElementById('mleaf').onchange = function () { minLeaf = parseInt(this.value, 10); buildWholeTree(); draw(); };
+  document.getElementById('imp').onchange = function () { metric = this.value; draw(); };
+
+  var g0 = genData(); PTS = g0.build; TEST = g0.tst;
+  buildWholeTree();
+  draw();
+})();
+</script>
+</body>
+</html>
