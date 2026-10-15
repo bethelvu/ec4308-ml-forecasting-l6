@@ -40,7 +40,7 @@ Tree-based methods: Decision trees for regression and classification
 
 # 1) Introduction
 
-- So far, we have stayed within the familiar parametric models framework: estimate a linear regression with various regularizations.
+- So far, we have stayed within the familiar parametric model framework: estimating linear regressions with various regularizations.
 - Although some of the models fitted could be classified as nonparametric (e.g., polynomial series whose degree grows with the sample size), we still wrote down the models in terms of a vector of parameters.
 - Today we will talk about methods that belong to the realm of *nonparametric estimation*.
 
@@ -134,9 +134,9 @@ $$\hat f(x)=\sum_{m=1}^{M} \hat c_m\, 1(x\in R_m), \qquad \hat c_m=\operatorname
 
 # 2) Regression tree idea {#idea-4}
 
-- Ideally, for a fixed number $M$ of boxes, we would choose the partition $(R_1,\dots,R_M)$ to minimize (where $\hat y_{R_m}$ is the mean of $y$ in $R_m$)
+- Ideally, for a fixed number $M$ of boxes, we would choose the partition $(R_1,\dots,R_M)$ to minimize (where $\hat y_{R_m} \equiv \hat c_m$ is the mean of $y$ in $R_m$):
 
-$$\sum_{m=1}^{M}\ \sum_{i:\,x_i\in R_m}\left(y_i-\hat y_{R_m}\right)^2 .$$
+$$\sum_{m=1}^{M}\ \sum_{i:\,x_i\in R_m}\left(y_i-\hat y_{R_m}\right)^2.$$
 
 - Problem: finding the best partition is computationally infeasible. We cannot enumerate all possible trees, i.e., all combinations of a first split and lower-level splits.
 - Thus, we use a *greedy* method: make the best split at each step, without looking ahead.
@@ -146,9 +146,9 @@ $$\sum_{m=1}^{M}\ \sum_{i:\,x_i\in R_m}\left(y_i-\hat y_{R_m}\right)^2 .$$
 - Main idea: form the tree using *recursive* binary partitions of the data.
 - **Step 1:** define $R_1(j,c)=\{X \mid X_j<c\}$ and $R_2(j,c)=\{X \mid X_j\ge c\}$, and choose the predictor $j$ and cut-point $c$ to solve
 
-$$\min_{j,\,c}\ \sum_{i:\,x_i\in R_1(j,c)}\left(y_i-\hat y_{i,R_1}\right)^2+\sum_{i:\,x_i\in R_2(j,c)}\left(y_i-\hat y_{i,R_2}\right)^2,$$
+$$\min_{j,\,c}\ \sum_{i:\,x_i\in R_1(j,c)}\left(y_i-\hat y_{R_1}\right)^2+\sum_{i:\,x_i\in R_2(j,c)}\left(y_i-\hat y_{R_2}\right)^2,$$
 
-  where $\hat y_{i,R_k}$ is the forecast of $y$ based on data in region $R_k$ (usually the sample mean of $y$ in that region).
+  where $\hat y_{R_k}$ is the forecast of $y$ based on data in region $R_k$ (usually the sample mean of $y$ in that region).
 
 # 2) Building a tree: CART {#cart-2}
 
@@ -159,7 +159,7 @@ $$\min_{j,\,c}\ \sum_{i:\,x_i\in R_1(j,c)}\left(y_i-\hat y_{i,R_1}\right)^2+\sum
 
 - Boston data: `medv` (median home value) on `lstat` (% lower-status population) only; pruned to 7 leaves, the size cross-validation (CV) picks in Section 3.
 
-![](media/image12.png){width="88%" fig-align="center"}
+![](media/image12.png){width="84%" fig-align="center"}
 
 - At each interior node, we go left if $x<c$, right if $x\ge c$.
 - Each observation goes down the tree until it reaches a leaf.
@@ -167,23 +167,27 @@ $$\min_{j,\,c}\ \sum_{i:\,x_i\in R_1(j,c)}\left(y_i-\hat y_{i,R_1}\right)^2+\sum
 
 # 2) Building a tree: Boston data {#boston-2}
 
-![](media/image12.png){width="88%" fig-align="center"}
+![](media/image12.png){width="84%" fig-align="center"}
 
 - The resulting fitted function is just a step function with steps given by the tree partition.
 - To make a prediction, find the interval to which the new observation belongs and set the forecast equal to the sample mean of that region.
 
 # 2) Building a tree: Boston data {#boston-3}
 
+:::: {.columns}
+::: {.column width="44%"}
 - Consider an additional predictor $x_2=$ `dis` (weighted mean of distances to five Boston employment centers). Again pruned to 7 leaves.
-
-![](media/image13.png){width="92%" fig-align="center"}
-
 - We can see how the $X$-space is partitioned.
 - Notable feature: automatic interaction detection (in this fitted tree, `dis` is used only in some ranges of `lstat`).
 
 ::: {.guide}
 Reading guide: `dis` is used in three of the four `lstat` bands, but not for $9.725\le$ `lstat` $<16.085$ (leaf 20.3). In this fitted tree the effect of `dis` depends on `lstat`: suggestive of an interaction, found without being told.
 :::
+:::
+::: {.column width="56%"}
+![](media/image13.png){width="100%"}
+:::
+::::
 
 # 2) Building a tree: Boston data {#boston-4}
 
@@ -209,12 +213,12 @@ Reading guide: `dis` is used in three of the four `lstat` bands, but not for $9.
 - Data: 1991 Survey of Income and Program Participation (SIPP), $N=9{,}915$. We try to predict 401(k) eligibility.
 - In Section 4, trees are fit on a training sample of 8,000 and evaluated on the remaining 1,915 (test sample).
 - List of predictors: income, age, schooling, family size, married dummy, male dummy, two-earner household dummy.
-- Such a model could be used to estimate propensity scores for studying the effect of 401(k) eligibility on wealth (e.g., Belloni et al., 2014).
+- Such a classification model could be used to estimate propensity scores for studying the effect of 401(k) eligibility on wealth (e.g., Belloni et al., 2014, who use Lasso; modern causal ML uses random forests or Double ML).
 - Since eligibility is a binary variable, predicting it is a *classification* problem (its splitting criteria come in Section 4).
 
 # 2) 401(k) data: simple tree
 
-- A simple tree with depth $\le 4$, fit on all 9,915 obs.; leaves show the predicted class and counts of <span style="white-space:nowrap">$y=0$ / $y=1$</span>.
+- For a simple tree with depth $\le 4$ fit on all 9,915 observations, leaves show the predicted class and counts of <span style="white-space:nowrap">$y=0$ / $y=1$</span>:
 
 ![](media/image17.png){width="66%" fig-align="center"}
 
@@ -241,7 +245,7 @@ Reading guide: `dis` is used in three of the four `lstat` bands, but not for $9.
 
 - The set of leaves gives a partition of the $X$-space.
 - For prediction, we let the observation $x_i$ follow the path dictated by the splitting rules down the tree until it reaches a leaf:
-  - for a continuous outcome, the prediction is the sample mean of $Y$ in that node;
+  - for a continuous outcome, the prediction is the sample mean of $y$ in that node;
   - for a categorical outcome, it is based on the category proportions of the training data in that node (e.g., the predicted category is the majority category in that node).
 
 # 2) A quick summary on trees {#summary-3}
@@ -265,7 +269,7 @@ Reading guide: `dis` is used in three of the four `lstat` bands, but not for $9.
 :::
 ::::
 
-# 2) A quick summary on trees: Problems
+# 2) A quick summary on trees: problems
 
 :::: {.columns}
 ::: {.column width="64%"}
@@ -295,10 +299,12 @@ Reading guide: `dis` is used in three of the four `lstat` bands, but not for $9.
 
 - Tree choice can be represented as a minimization problem over subtrees $T$ of a big initial tree, with penalized objective $Q(T,y)$:
 
-$$\hat T_\alpha=\arg\min_T Q(T,y)=\arg\min_T\ L(T,y)+\alpha|T|$$
+$$\hat T_\alpha=\arg\min_T Q(T,y)=\arg\min_T\ \Big[L(T,y)+\alpha|T|\Big]$$
 
-- Here $L(T,y)$ is a loss function of using the tree $T$ to forecast $y$: usually the residual sum of squares (RSS). With squared loss,
-$\ \hat T_\alpha=\arg\min_T\ \sum_{m=1}^{|T|}\sum_{i:\,x_i\in R_m}\left(y_i-\hat y_{R_m}\right)^2+\alpha|T|$.
+- Here $L(T,y)$ is a loss function of using the tree $T$ to forecast $y$: usually the residual sum of squares (RSS). With squared loss:
+
+$$\hat T_\alpha=\arg\min_T\ \sum_{m=1}^{|T|}\sum_{i:\,x_i\in R_m}\left(y_i-\hat y_{R_m}\right)^2+\alpha|T|.$$
+
 - $|T|$ is the number of leaves – a measure of tree complexity.
 - $\alpha$ is the "penalty" parameter that performs regularization. It plays the role of $\lambda$ in penalized regression fitting.
 - If $\alpha=0$, we would keep the full big tree, which overfits the data. We need to choose $\alpha$ carefully: it is the key tuning choice.
@@ -322,13 +328,13 @@ $\ \hat T_\alpha=\arg\min_T\ \sum_{m=1}^{|T|}\sum_{i:\,x_i\in R_m}\left(y_i-\hat
 - For a given $\alpha$, choose the subtree that has the smallest $Q(T,y)$.
 
 ::: {.guide}
-Weakest link: for an internal node $t$ with branch $T_t$, let $L(t)$ be the loss if $t$ is collapsed to a leaf and $L(T_t)$ the loss of its branch. The increase in loss per leaf removed is $g(t)=\dfrac{L(t)-L(T_t)}{|T_t|-1}$. Collapse the node with the smallest $g(t)$, then repeat; the successive values of $g$ are the $\alpha$'s at which the optimal subtree changes.
+Weakest link: for an internal node $t$ with branch $T_t$, let $L(t)$ be the loss if $t$ is collapsed to a leaf and $L(T_t)$ the loss of its branch. The increase in loss per leaf removed is $g(t)=\dfrac{L(t)-L(T_t)}{|T_t|-1}$. For example, collapsing a 3-leaf branch ($|T_t|=3$) with loss 20 to a leaf with loss 50 gives $g(t)=\frac{50-20}{3-1}=15$. Collapse the node with the smallest $g(t)$, then repeat; the successive values of $g$ are the $\alpha$'s at which the optimal subtree changes.
 :::
 
 # 3) Choice of $\alpha$
 
 - The remaining (most important) step is to choose $\alpha$ from the data.
-- Not much surprise here: the usual approach is K-fold cross-validation (CV). In each fold, grow and prune on the training part and compute the error on the held-out part; pick the $\alpha$ with the lowest average CV error.
+- Not much surprise here: the usual approach is $K$-fold cross-validation (CV). In each fold, grow and prune on the training part and compute the error on the held-out part; pick the $\alpha$ with the lowest average CV error.
 
 # 3) Simple example: Boston data
 
@@ -380,9 +386,9 @@ The same 7-leaf tree as in Section 2. Here `rpart` put the condition `lstat` $\g
 :::
 ::::
 
-# Interactive: prune a big tree with $\alpha$ {.companion-only}
+# 3) Interactive: prune a big tree with $\alpha$ {.companion-only}
 
-<iframe src="tree-demo.html" width="100%" height="602" style="border:none;" title="Interactive regression tree: grow a big tree, then prune it with cost-complexity alpha"></iframe>
+<iframe src="tree-demo.html" width="100%" height="560" style="border:none;" title="Interactive regression tree: grow a big tree, then prune it with cost-complexity alpha"></iframe>
 
 # 4) Loss function for classification trees
 
@@ -391,9 +397,9 @@ The same 7-leaf tree as in Section 2. Here `rpart` put the condition `lstat` $\g
 - Let us come back to the classification problem.
 - MSE is less natural here – we use a different loss.
 - Let the loss function be
-$\ L(T,y)=\sum_{m=1}^{|T|}N_m\,L_m(T,y_m)$.
+$L(T,y)=\sum_{m=1}^{|T|}N_m\,L_m(y_m)$.
 - $m$ indexes terminal nodes in tree $T$; $N_m$ is the no. of obs. in terminal node $m$; $y_m$ is the vector of outcomes for obs. in node $m$; $L_m$ is the node loss (next slide).
-- Let $R_m$ denote the region of $X$ corresponding to node $m$, and $\ \hat p_{mk}=\frac{1}{N_m}\sum_{i:\,x_i\in R_m}1(y_i=k)$, $k=1,\dots,K$.
+- Let $R_m$ denote the region of $X$ corresponding to node $m$, and $\hat p_{mk}=\frac{1}{N_m}\sum_{i:\,x_i\in R_m}1(y_i=k)$, $k=1,\dots,K$.
 - Observations in node $m$ are classified to $k(m)=\arg\max_k \hat p_{mk}$.
 :::
 ::: {.column width="36%"}
@@ -411,11 +417,15 @@ $\ L(T,y)=\sum_{m=1}^{|T|}N_m\,L_m(T,y_m)$.
 ::: {.column width="64%"}
 Choices for the node loss $L_m$:
 
-- **Misclassification error:** $\ \dfrac{1}{N_m}\sum_{i:\,x_i\in R_m}1\big(y_i\ne k(m)\big)=1-\hat p_{m,k(m)}$
+- **Misclassification error:** $\dfrac{1}{N_m}\sum_{i:\,x_i\in R_m}1\big(y_i\ne k(m)\big)=1-\hat p_{m,k(m)}$
   - binary case: $1-\max\{p,\,1-p\}$, with $p$ the proportion with $y=1$.
-- **Gini index:** $\ \sum_{k=1}^{K}\hat p_{mk}(1-\hat p_{mk})$; binary case: $2p(1-p)$.
-- **Cross-entropy or deviance** (negative log-likelihood): $\ -\sum_{k=1}^{K}\hat p_{mk}\log\hat p_{mk}$; binary case: $-p\log p-(1-p)\log(1-p)$.
+- **Gini index:** $\sum_{k=1}^{K}\hat p_{mk}(1-\hat p_{mk})$; binary case: $2p(1-p)$.
+- **Cross-entropy or deviance** (negative log-likelihood): $-\sum_{k=1}^{K}\hat p_{mk}\log\hat p_{mk}$; binary case: $-p\log p-(1-p)\log(1-p)$.
 - Some also use squared loss (MSE) for a binary $y$.
+
+::: {.guide}
+Worked example (binary node, natural log): $p=0.2$ gives misclassification $0.2$, Gini $2(0.2)(0.8)=0.32$, entropy $\approx 0.50$; at $p=0.5$ all three peak ($0.5$, $0.5$, $\log 2\approx0.69$).
+:::
 :::
 ::: {.column width="36%"}
 ![](media/image28.png){width="100%"}
@@ -426,15 +436,11 @@ Choices for the node loss $L_m$:
 :::
 ::::
 
-::: {.guide}
-Worked example (binary node, natural log): $p=0.2$ gives misclassification $0.2$, Gini $2(0.2)(0.8)=0.32$, entropy $\approx 0.50$; at $p=0.5$ all three peak ($0.5$, $0.5$, $\log 2\approx0.69$).
-:::
+# 4) Interactive: grow a classification tree, watch Gini and cross-entropy fall {.companion-only}
 
-# Interactive: grow a classification tree, watch Gini and cross-entropy fall {.companion-only}
+Two interleaved classes; CART picks the split that most reduces weighted impurity. Step through the splits and switch the criterion between **Gini** and **Cross-entropy** to see how recursive partitioning isolates regions. Lower *min. obs. per leaf* to watch the boundary overfit and train error collapse — an intuition for pruning (covered in Section 3).
 
-Two interleaved classes; CART picks the split that most reduces weighted impurity. Step through the splits and switch the curve between **Gini** and **cross-entropy** to see the loss concepts above in action. Try lowering *min. obs. per leaf* and growing all the way: the boundary overfits and train error collapses — an intuition for pruning (next section).
-
-<iframe src="classifier-demo.html" width="100%" height="760" style="border:none;" title="Interactive classification tree: recursive splitting and Gini vs cross-entropy impurity"></iframe>
+<iframe src="classifier-demo.html" width="100%" height="560" style="border:none;" title="Interactive classification tree: recursive splitting and Gini vs cross-entropy impurity"></iframe>
 
 # 4) Common loss functions: comments
 
@@ -454,14 +460,14 @@ Two interleaved classes; CART picks the split that most reduces weighted impurit
 # 4) Classification: 401(k) eligibility
 
 :::: {.columns}
-::: {.column width="30%"}
+::: {.column width="36%"}
 - CV-min Gini tree:
 
 ::: {.guide}
 CV-min = CV-minimizing. Grown with Gini (`rpart`); CV error is the misclassification rate. Fit on the training sample (8,000 obs.). Each leaf shows the predicted class, then the counts of <span style="white-space:nowrap">$y=0$ / $y=1$</span>.
 :::
 :::
-::: {.column width="70%"}
+::: {.column width="64%"}
 ![](media/image30.png){width="92%"}
 :::
 ::::
@@ -469,30 +475,30 @@ CV-min = CV-minimizing. Grown with Gini (`rpart`); CV error is the misclassifica
 # 4) Classification: 401(k) eligibility {#k401-2}
 
 :::: {.columns}
-::: {.column width="62%"}
+::: {.column width="36%"}
 - CV-min deviance tree (not unique; the smallest is shown):
 
-![](media/image31.png){width="78%"}
-:::
-::: {.column width="38%"}
 ::: {.guide}
 Grown and CV-pruned on deviance (`tree` package). Both leaves of the left split predict 0: the split makes the nodes purer (lower deviance) without changing the predicted class.
 :::
+:::
+::: {.column width="64%"}
+![](media/image31.png){width="85%"}
 :::
 ::::
 
 # 4) Classification: 401(k) eligibility {#k401-3}
 
 :::: {.columns}
-::: {.column width="30%"}
+::: {.column width="36%"}
 - CV-min squared loss tree:
 
 ::: {.guide}
-Grown and CV-pruned on squared loss (`rpart`, anova). Leaves show the share with $y=1$ and the node size. Classify 1 if the share exceeds 0.5: only the right-most leaf.
+Grown and CV-pruned on squared loss (`rpart`, anova). Leaves show the share with $y=1$ and the node size. Classify 1 if the share exceeds 0.5: only the rightmost leaf.
 :::
 :::
-::: {.column width="70%"}
-![](media/image32.png){width="96%"}
+::: {.column width="64%"}
+![](media/image32.png){width="94%"}
 :::
 ::::
 
@@ -500,12 +506,14 @@ Grown and CV-pruned on squared loss (`rpart`, anova). Leaves show the share with
 
 - All three trees give the same 0/1 rule (predict 1 if income is above about \$57,000), so they make identical test-set predictions.
 - For reference, we also fit a logit model using the same variables; its results are in parentheses.
-- Test-set errors: trees 665/1915 (logit 651; predicting 0 for everyone 735):
+- Test-set errors: trees 665/1,915 (logit 651; predicting 0 for everyone 735):
 
+::: {.compact-table}
 |               |       | Actual 0    | Actual 1   |
 |---------------|:-----:|:-----------:|:----------:|
 | **Predicted** | **0** | 1052 (1059) | 537 (530)  |
 |               | **1** | 128 (121)   | 198 (205)  |
+:::
 
 # 4) Performance measures for classification
 
@@ -513,12 +521,15 @@ Grown and CV-pruned on squared loss (`rpart`, anova). Leaves show the share with
 - Below are some common terms you may encounter.
 - **Confusion matrix** = matrix of predicted vs. actual values:
 
-|               |       | Actual 0 | Actual 1 |
-|---------------|:-----:|:--------:|:--------:|
-| **Predicted** | **0** | 1052     | 537      |
-|               | **1** | 128      | 198      |
+::: {.compact-table}
+|               |       | Actual 0 (TN / FP) | Actual 1 (FN / TP) | Total |
+|---------------|:-----:|:------------------:|:------------------:|:-----:|
+| **Predicted** | **0** | 1052 (TN)          | 537 (FN)           | 1589  |
+|               | **1** | 128 (FP)           | 198 (TP)           | 326   |
+| **Total**     |       | 1180               | 735                | 1915  |
+:::
 
-- **Lift:** summary of prediction performance comparing % of true positives (TP) to % classified as 1 (N).
+- **Lift (cumulative gains):** summary of prediction performance comparing % of true positives (TP) to % classified as 1 (N).
 - **ROC** (Receiver Operating Characteristic): summary of prediction performance comparing % of true positives (TP) to % of false positives (FP).
 
 # 4) Performance measures for classification {#perf-2}
@@ -554,6 +565,6 @@ Worked point (deviance tree, test data, $s=0.5$): <span style="white-space:nowra
 - Tree-based methods provide a benchmark in many modern machine learning / big data settings.
 - Small trees are simple to interpret, scalable, and give reasonable (if rarely the best) predictions "off-the-shelf".
 - They perform variable selection and detect nonlinearities and interactions *without careful user specification*.
-- In the 401(k) example, the CV-pruned trees (3–8 leaves) all reduce to one rule, predict 1 if income > ≈\$57,000: 665/1915 test errors vs. 651 for logit and 735 for predicting 0.
+- In the 401(k) example, the CV-pruned trees (3–8 leaves) all reduce to a single decision rule—predict 1 if $\text{income} \gtrsim \$57{,}000$—yielding 665/1,915 test errors (vs. 651 for logit and 735 for predicting 0).
 - They may underperform in prediction in their basic form; tree size is typically chosen by CV-based pruning.
 - They may be unstable: a small change in data can result in a large change in the estimated tree. *Next: bagging and random forests reduce this instability; boosting mainly improves accuracy.*

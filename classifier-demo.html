@@ -7,39 +7,40 @@
 <style>
   :root { --navy:#1F3864; --green:#1F6F2E; --red:#C00000; --mag:#C026D3; --ink:#1a1a1a; --mute:#64748b; --line:#cbd5e1; --bg:#ffffff; --panel:#f8fafc; }
   * { box-sizing: border-box; }
-  body { margin:0; padding:8px 12px 2px; background:var(--bg); color:var(--ink); font:15px/1.35 "Segoe UI", system-ui, -apple-system, sans-serif; }
-  h2 { margin:0 0 4px; font-size:16px; color:var(--navy); }
-  .sub { color:var(--mute); font-size:13.5px; margin-bottom:6px; }
-  .grid { display:grid; grid-template-columns:1.3fr 1fr; gap:10px; }
-  .card { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:6px 8px; }
-  .card h3 { margin:0 0 2px; font-size:13.5px; color:var(--navy); font-weight:600; }
+  body { margin:0; padding:6px 10px 2px; background:var(--bg); color:var(--ink); font:14px/1.3 "Segoe UI", system-ui, -apple-system, sans-serif; }
+  h2 { margin:0 0 2px; font-size:15px; color:var(--navy); }
+  .sub { color:var(--mute); font-size:12.5px; margin-bottom:4px; line-height:1.25; }
+  .grid { display:grid; grid-template-columns:1.25fr 1fr; gap:8px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:5px 7px; }
+  .card h3 { margin:0 0 2px; font-size:12.5px; color:var(--navy); font-weight:600; }
   canvas, svg { display:block; width:100%; }
-  .controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px 18px; margin:8px 0 6px; }
-  .controls label { font-size:13px; color:var(--navy); font-weight:600; }
-  input[type=range] { width:250px; accent-color:var(--green); vertical-align:middle; }
-  select, button { font:inherit; font-size:13px; padding:3px 8px; border:1px solid var(--line); border-radius:4px; background:#fff; color:var(--ink); cursor:pointer; }
+  .controls { display:flex; flex-wrap:wrap; align-items:center; gap:6px 14px; margin:4px 0; }
+  .controls label { font-size:12.5px; color:var(--navy); font-weight:600; }
+  select, button { font:inherit; font-size:12px; padding:2px 7px; border:1px solid var(--line); border-radius:4px; background:#fff; color:var(--ink); cursor:pointer; }
   button { background:var(--green); color:#fff; border-color:var(--green); }
   button.alt { background:#fff; color:var(--green); }
-  .stats { display:flex; flex-wrap:wrap; gap:6px 18px; font-size:13px; }
+  .stats { display:flex; flex-wrap:wrap; gap:4px 14px; font-size:12px; margin-bottom:2px; }
   .stats b { color:var(--navy); }
   .stats .test b { color:var(--red); }
-  .note { font-size:12px; color:var(--mute); margin-top:4px; }
-  .legend { display:flex; flex-wrap:wrap; gap:12px; font-size:12.5px; margin-top:2px; }
-  .legend .c0::before{ content:""; display:inline-block; width:9px; height:9px; border-radius:50%; background:#1F6F2E; margin-right:4px; }
-  .legend .c1::before{ content:""; display:inline-block; width:9px; height:9px; border-radius:50%; background:#C026D3; margin-right:4px; }
-  @media (max-width: 760px) { .grid { grid-template-columns:1fr; } input[type=range]{ width:180px; } }
+  .note { font-size:11px; color:var(--mute); margin-top:2px; }
+  .legend { display:inline-flex; flex-wrap:wrap; gap:10px; font-size:12px; margin-left:12px; }
+  .legend .c0::before{ content:""; display:inline-block; width:8px; height:8px; border-radius:50%; background:#1F6F2E; margin-right:3px; }
+  .legend .c1::before{ content:""; display:inline-block; width:8px; height:8px; border-radius:50%; background:#C026D3; margin-right:3px; }
+  @media (max-width: 760px) { .grid { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
-<h2>Recursive splitting on a classification problem: watch impurity fall</h2>
-<div class="sub">Two classes drawn from interleaved Gaussian clouds. CART greedily chooses, at every leaf, the predictor and threshold that most reduce weighted impurity. The decision boundary grows one split at a time; the right panel traces the tree&#8217;s weighted impurity and both the training and held-out (test) error over the same split sequence. <b>Splits are always chosen by the Gini index;</b> the metric dropdown only changes which impurity curve is drawn.</div>
-<div class="legend"><span class="c0">Class 0</span><span class="c1">Class 1</span></div>
+<div style="display:flex; justify-content:space-between; align-items:baseline;">
+  <h2>Recursive splitting on a classification problem: watch impurity fall</h2>
+  <div class="legend"><span class="c0">Class 0</span><span class="c1">Class 1</span></div>
+</div>
+<div class="sub">Two classes from interleaved Gaussian clouds. CART greedily splits the region that most reduces weighted impurity. Regions are bounded and shaded by predicted majority class. Test error (red) evaluates held-out points. Switch criterion to compare <b>Gini</b> vs <b>Cross-entropy</b> trees.</div>
 
 <div class="controls">
   <label for="mleaf">Min. obs. per leaf</label>
-  <select id="mleaf"><option>1</option><option selected>3</option><option>5</option><option>10</option><option>20</option><option>40</option></select>
-  <label for="imp">Impurity curve</label>
-  <select id="imp"><option value="gini">Gini</option><option value="entropy">Cross-entropy</option></select>
+  <select id="mleaf"><option>1</option><option selected>3</option><option>5</option><option>10</option><option>20</option></select>
+  <label for="imp">Splitting criterion &amp; curve</label>
+  <select id="imp"><option value="gini" selected>Gini</option><option value="entropy">Cross-entropy</option></select>
   <button id="step">+ Next split</button>
   <button id="grow" class="alt">Grow all</button>
   <button id="resample">New data</button>
@@ -53,20 +54,20 @@
   <span class="test">Test error = <b id="teV"></b></span>
 </div>
 
-<div class="grid" style="margin-top:8px">
+<div class="grid" style="margin-top:4px">
   <div class="card">
-    <h3>Partition — split lines in split order (dots = test points)</h3>
-    <canvas id="part" width="640" height="430"></canvas>
+    <h3>Partition &mdash; recursive splits inside parent regions (shaded by majority vote)</h3>
+    <canvas id="part" width="640" height="320"></canvas>
   </div>
   <div class="card">
     <h3>Error and impurity as splits are added</h3>
-    <canvas id="impc" width="520" height="230"></canvas>
-    <div class="note">Grey = not yet grown. Test error (red) is computed on points the tree has never seen; its rise after optimal size signals overfitting.</div>
+    <canvas id="impc" width="520" height="200"></canvas>
+    <div class="note">Test error (red) is computed on held-out points. Widening gap signals overfitting; cross-entropy &ge; 1/2&middot;Gini everywhere.</div>
   </div>
 </div>
-<div class="card" style="margin-top:10px">
-  <h3 id="treeTitle">Leaves so far (each: n, n<sub>1</sub>, Gini)</h3>
-  <svg id="tree" viewBox="0 0 1000 240" preserveAspectRatio="xMidYMid meet"></svg>
+<div class="card" style="margin-top:6px; padding:4px 8px;">
+  <h3 id="treeTitle" style="margin-bottom:1px;">Active leaves (n, class 1 count, impurity)</h3>
+  <svg id="tree" viewBox="0 0 1000 110" preserveAspectRatio="xMidYMid meet" style="height:70px;"></svg>
 </div>
 
 <script>
@@ -79,7 +80,7 @@
   function gini(p) { return 2 * p * (1 - p); }
   function entropy(p) { if (p <= 0 || p >= 1) return 0; return -(p * Math.log(p) + (1 - p) * Math.log(1 - p)); }
 
-  var TRAIN_N = 170, TEST_N = 90; // total 260 split into train + held-out test
+  var TRAIN_N = 170, TEST_N = 90;
   var PTS = [], TEST = [];
   var minLeaf = 3;
   var metric = 'gini';
@@ -88,38 +89,43 @@
   var treeRoot = null;
 
   function genData() {
-    var build = [];   // train
-    var tst = [];     // test
+    var build = [];
+    var tst = [];
     function one() {
       var label = (rnd() < 0.5) ? 0 : 1;
-      // Two strongly overlapping clouds: the decision boundary is genuinely noisy,
-      // so an over-deep tree memorizes sampling noise and test error can rise.
       var cx = label === 0 ? 3.5 : 5.2, cy = label === 0 ? 3.5 : 5.6;
       return { x: Math.max(0.2, Math.min(9.8, cx + 1.85 * rnorm())),
                y: Math.max(0.2, Math.min(9.8, cy + 1.85 * rnorm())), c: label };
     }
-    var i;
-    for (i = 0; i < TRAIN_N; i++) build.push(one());
-    for (i = 0; i < TEST_N; i++) tst.push(one());
+    for (var i = 0; i < TRAIN_N; i++) build.push(one());
+    for (var i = 0; i < TEST_N; i++) tst.push(one());
     return { build: build, tst: tst };
   }
 
   function count1(ids) { var c = 0; for (var i = 0; i < ids.length; i++) if (PTS[ids[i]].c === 1) c++; return c; }
-  function makeNode(ids) { var n1 = count1(ids); return { ids: ids, n1: n1, p: n1 / ids.length, child: [], splitIdx: -1 }; }
+  function makeNode(ids, x0, x1, y0, y1) {
+    var n1 = count1(ids);
+    return {
+      ids: ids, n1: n1, p: ids.length ? (n1 / ids.length) : 0,
+      x0: x0, x1: x1, y0: y0, y1: y1,
+      child: [], splitIdx: -1
+    };
+  }
   function EACH() { var a = []; for (var i = 0; i < TRAIN_N; i++) a.push(i); return a; }
 
   function bestSplit(ids) {
     var n = ids.length, n1 = count1(ids);
-    if (n1 === 0 || n1 === n || n < 2 * minLeaf) return null;  // enforce min_samples_leaf: both children >= minLeaf
+    if (n1 === 0 || n1 === n || n < 2 * minLeaf) return null;
     var best = null;
+    var lossFn = (metric === 'entropy') ? entropy : gini;
     function score(coord, thr) {
       var l = 0, l1 = 0, r = 0, r1 = 0;
       for (var i = 0; i < n; i++) {
         var v = (coord === 0) ? PTS[ids[i]].x : PTS[ids[i]].y;
         if (v < thr) { l++; if (PTS[ids[i]].c === 1) l1++; } else { r++; if (PTS[ids[i]].c === 1) r1++; }
       }
-      if (l < minLeaf || r < minLeaf) return null;           // reject child splits smaller than minLeaf
-      return { g: (l / n) * gini(l1 / l) + (r / n) * gini(r1 / r) };
+      if (l < minLeaf || r < minLeaf) return null;
+      return { g: (l / n) * lossFn(l1 / l) + (r / n) * lossFn(r1 / r) };
     }
     for (var ci = 0; ci < 2; ci++) {
       var coord = ci;
@@ -145,10 +151,20 @@
         var v = (node.coord === 0) ? PTS[node.ids[i]].x : PTS[node.ids[i]].y;
         (v < node.thr ? leftIds : rightIds).push(node.ids[i]);
       }
-      node.child = [makeNode(leftIds), makeNode(rightIds)];
+      if (node.coord === 0) {
+        node.child = [
+          makeNode(leftIds, node.x0, node.thr, node.y0, node.y1),
+          makeNode(rightIds, node.thr, node.x1, node.y0, node.y1)
+        ];
+      } else {
+        node.child = [
+          makeNode(leftIds, node.x0, node.x1, node.y0, node.thr),
+          makeNode(rightIds, node.x0, node.x1, node.thr, node.y1)
+        ];
+      }
       rec(node.child[0]); rec(node.child[1]);
     }
-    treeRoot = makeNode(EACH());
+    treeRoot = makeNode(EACH(), 0, 10, 0, 10);
     rec(treeRoot);
     orderNodes = [];
     var q = [treeRoot];
@@ -164,7 +180,7 @@
   var impC = document.getElementById('impc').getContext('2d');
   var treeSvg = document.getElementById('tree');
   function X2P(x) { return x / 10 * 640; }
-  function Y2P(y) { return 430 - y / 10 * 430; }
+  function Y2P(y) { return 320 - y / 10 * 320; }
 
   function revealedRegions() {
     var leaves = [];
@@ -177,43 +193,66 @@
   }
 
   function drawPartition() {
-    partC.clearRect(0, 0, 640, 430);
-    partC.fillStyle = '#fff'; partC.fillRect(0, 0, 640, 430);
-    // test points as hollow dots first
-    for (var i = 0; i < TEST.length; i++) {
-      partC.beginPath(); partC.arc(X2P(TEST[i].x), Y2P(TEST[i].y), 3, 0, 6.2832);
-      partC.fillStyle = TEST[i].c === 0 ? '#1F6F2E' : '#C026D3'; partC.fill();
-      partC.lineWidth = 1.5; partC.strokeStyle = '#fff'; partC.stroke();
+    partC.clearRect(0, 0, 640, 320);
+    // 1. Shaded rectangular decision regions bounded by tree splits
+    var leaves = revealedRegions();
+    for (var l = 0; l < leaves.length; l++) {
+      var lf = leaves[l];
+      if (lf.x0 !== undefined) {
+        var isClass1 = (lf.n1 * 2 >= lf.ids.length);
+        partC.fillStyle = isClass1 ? 'rgba(192, 38, 211, 0.12)' : 'rgba(31, 111, 46, 0.12)';
+        var rx = X2P(lf.x0), ry = Y2P(lf.y1);
+        var rw = X2P(lf.x1) - rx, rh = Y2P(lf.y0) - ry;
+        partC.fillRect(rx, ry, rw, rh);
+      }
     }
-    for (var j = 0; j < PTS.length; j++) {
-      partC.beginPath(); partC.arc(X2P(PTS[j].x), Y2P(PTS[j].y), 3, 0, 6.2832);
-      partC.fillStyle = PTS[j].c === 0 ? '#1F6F2E' : '#C026D3'; partC.fill();
-    }
-    partC.strokeStyle = '#7f8ea3'; partC.lineWidth = 2;
+    // 2. Bounded recursive split lines
+    partC.strokeStyle = '#334155'; partC.lineWidth = 2;
     for (var s = 0; s < shown; s++) {
       var nd = orderNodes[s];
       partC.beginPath();
-      if (nd.coord === 0) { partC.moveTo(X2P(nd.thr), 0); partC.lineTo(X2P(nd.thr), 430); }
-      else { partC.moveTo(0, Y2P(nd.thr)); partC.lineTo(640, Y2P(nd.thr)); }
+      if (nd.coord === 0) {
+        partC.moveTo(X2P(nd.thr), Y2P(nd.y0));
+        partC.lineTo(X2P(nd.thr), Y2P(nd.y1));
+      } else {
+        partC.moveTo(X2P(nd.x0), Y2P(nd.thr));
+        partC.lineTo(X2P(nd.x1), Y2P(nd.thr));
+      }
       partC.stroke();
+    }
+    // 3. Test points as ring dots
+    for (var i = 0; i < TEST.length; i++) {
+      partC.beginPath(); partC.arc(X2P(TEST[i].x), Y2P(TEST[i].y), 3.5, 0, 6.2832);
+      partC.fillStyle = TEST[i].c === 0 ? '#1F6F2E' : '#C026D3'; partC.fill();
+      partC.lineWidth = 1.5; partC.strokeStyle = '#ffffff'; partC.stroke();
+    }
+    // 4. Training points as solid dots
+    for (var j = 0; j < PTS.length; j++) {
+      partC.beginPath(); partC.arc(X2P(PTS[j].x), Y2P(PTS[j].y), 2.5, 0, 6.2832);
+      partC.fillStyle = PTS[j].c === 0 ? '#1F6F2E' : '#C026D3'; partC.fill();
     }
   }
 
   function weightedMetric(lvs, fn) {
     var tot = 0;
-    for (var i = 0; i < lvs.length; i++) { var ids = lvs[i].ids; if (!ids.length) continue; var p = lvs[i].n1 / ids.length; tot += (ids.length / TRAIN_N) * fn(p); }
+    for (var i = 0; i < lvs.length; i++) {
+      var ids = lvs[i].ids; if (!ids.length) continue;
+      var p = lvs[i].n1 / ids.length;
+      tot += (ids.length / TRAIN_N) * fn(p);
+    }
     return tot;
   }
-  // Classify a single point by walking the revealed (first `shown`) tree.
-    function classifyPoint(p, k) {
-      var node = treeRoot, guard = 200;
-      while (node && node.splitIdx >= 0 && node.splitIdx < k && guard-- > 0) {
-        var v = (node.coord === 0) ? p.x : p.y;
-        node = (v < node.thr) ? node.child[0] : node.child[1];
-      }
-      return node && node.ids.length ? ((node.n1 * 2 >= node.ids.length) ? 1 : 0) : null;
+
+  function classifyPoint(p, k) {
+    var node = treeRoot, guard = 200;
+    while (node && node.splitIdx >= 0 && node.splitIdx < k && guard-- > 0) {
+      var v = (node.coord === 0) ? p.x : p.y;
+      node = (v < node.thr) ? node.child[0] : node.child[1];
     }
-    function assign(data) {
+    return node && node.ids.length ? ((node.n1 * 2 >= node.ids.length) ? 1 : 0) : null;
+  }
+
+  function assign(data) {
     var labels = [];
     for (var i = 0; i < data.length; i++) labels.push(null);
     (function walk(node) {
@@ -226,9 +265,9 @@
     })(treeRoot);
     return labels;
   }
+
   function trainErr() { var lab = assign(PTS); var m = 0; for (var i = 0; i < PTS.length; i++) if (lab[i] !== null && lab[i] !== PTS[i].c) m++; return m / PTS.length; }
   function testErr() {
-    // classify test points by walking the revealed tree
     var m = 0;
     for (var i = 0; i < TEST.length; i++) {
       var p = TEST[i], node = treeRoot, guard = 200;
@@ -240,6 +279,7 @@
     }
     return m / TEST.length;
   }
+
   function impurityCurveAt(k) {
     var leaves = [];
     (function walk(node) { var isSplit = node.splitIdx >= 0 && node.splitIdx < k; if (!isSplit) { leaves.push(node); return; } walk(node.child[0]); walk(node.child[1]); })(treeRoot);
@@ -247,66 +287,85 @@
   }
 
   function drawImpurity() {
-    impC.clearRect(0, 0, 520, 230);
-    impC.fillStyle = '#fff'; impC.fillRect(0, 0, 520, 230);
+    impC.clearRect(0, 0, 520, 200);
+    impC.fillStyle = '#fff'; impC.fillRect(0, 0, 520, 200);
     var maxN = Math.max(1, orderNodes.length);
     var maxV = 1;
     impC.strokeStyle = '#cbd5e1'; impC.lineWidth = 1;
-    impC.beginPath(); impC.moveTo(30, 16); impC.lineTo(30, 195); impC.lineTo(512, 195); impC.stroke();
-    // y ticks
+    impC.beginPath(); impC.moveTo(30, 14); impC.lineTo(30, 170); impC.lineTo(512, 170); impC.stroke();
     impC.fillStyle = '#94a3b8'; impC.font = '10px Segoe UI';
-    for (var tk = 0; tk <= 6; tk++) { var tv = tk / 6; var ty = 195 - tv * 165; impC.fillText((tv).toFixed(1), 6, ty + 3); impC.beginPath(); impC.moveTo(30, ty); impC.lineTo(512, ty); impC.strokeStyle='#e8edf3'; impC.lineWidth=1; impC.stroke(); }
+    for (var tk = 0; tk <= 5; tk++) {
+      var tv = tk / 5; var ty = 170 - tv * 145;
+      impC.fillText((tv).toFixed(1), 6, ty + 3);
+      impC.beginPath(); impC.moveTo(30, ty); impC.lineTo(512, ty);
+      impC.strokeStyle='#e8edf3'; impC.lineWidth=1; impC.stroke();
+    }
     impC.strokeStyle = '#cbd5e1'; impC.lineWidth = 1;
-    if (orderNodes.length === 0) { impC.fillText('Single leaf: no splits to show.', 60, 100); return; }
+    if (orderNodes.length === 0) { impC.fillText('Single leaf: no splits to show.', 60, 90); return; }
     // legend
     impC.fillStyle = '#1F3864'; impC.font = '11px Segoe UI';
-    impC.fillText(metric === 'gini' ? 'Gini' : 'Cross-entropy', 40, 30); impC.fillRect(180,23,10,3); // sample
-    impC.fillStyle = '#1F6F2E'; impC.fillText('train error', 250, 30);
-    impC.fillStyle = '#C00000'; impC.fillText('test error', 370, 30);
+    impC.fillText(metric === 'gini' ? 'Gini impurity' : 'Cross-entropy', 40, 24);
+    impC.fillStyle = '#1F6F2E'; impC.fillText('train error', 210, 24);
+    impC.fillStyle = '#C00000'; impC.fillText('test error', 330, 24);
     // impurity curve
     for (var k = 0; k <= shown; k++) {
-      var x = 30 + (k / maxN) * 470, v = impurityCurveAt(k), y = 195 - (v / maxV) * 160;
+      var x = 30 + (k / maxN) * 470, v = impurityCurveAt(k), y = 170 - (v / maxV) * 145;
       impC.fillStyle = '#1F3864'; impC.beginPath(); impC.arc(x, y, 3, 0, 6.2832); impC.fill();
-      if (k > 0) { impC.strokeStyle = '#1F3864'; impC.beginPath(); impC.moveTo(30 + ((k-1)/maxN)*470, 195 - (impurityCurveAt(k-1)/maxV)*160); impC.lineTo(x, y); impC.stroke(); }
+      if (k > 0) {
+        impC.strokeStyle = '#1F3864'; impC.beginPath();
+        impC.moveTo(30 + ((k-1)/maxN)*470, 170 - (impurityCurveAt(k-1)/maxV)*145);
+        impC.lineTo(x, y); impC.stroke();
+      }
     }
-    // train error + test error curves over k (need k-conditional errors: reconstruct per k)
     function errsAt(k) {
-      var mT = 0, mS = 0, i;
-      for (i = 0; i < PTS.length; i++) if (classifyPoint(PTS[i], k) !== PTS[i].c) mT++;
-      for (i = 0; i < TEST.length; i++) if (classifyPoint(TEST[i], k) !== TEST[i].c) mS++;
+      var mT = 0, mS = 0;
+      for (var i = 0; i < PTS.length; i++) if (classifyPoint(PTS[i], k) !== PTS[i].c) mT++;
+      for (var i = 0; i < TEST.length; i++) if (classifyPoint(TEST[i], k) !== TEST[i].c) mS++;
       return { tr: mT / PTS.length, te: mS / TEST.length };
     }
     for (var k = 0; k <= shown; k++) {
       var e = errsAt(k);
       var x2 = 30 + (k / maxN) * 470;
-      var yT = 195 - (e.tr / maxV) * 160, yS = 195 - (e.te / maxV) * 160;
-      impC.fillStyle = k <= shown ? '#1F6F2E' : '#b9c4d4'; impC.beginPath(); impC.arc(x2, yT, 3, 0, 6.2832); impC.fill();
-      impC.fillStyle = k <= shown ? '#C00000' : '#e6b3b3'; impC.beginPath(); impC.arc(x2, yS, 3, 0, 6.2832); impC.fill();
+      var yT = 170 - (e.tr / maxV) * 145, yS = 170 - (e.te / maxV) * 145;
+      impC.fillStyle = '#1F6F2E'; impC.beginPath(); impC.arc(x2, yT, 3, 0, 6.2832); impC.fill();
+      impC.fillStyle = '#C00000'; impC.beginPath(); impC.arc(x2, yS, 3, 0, 6.2832); impC.fill();
       if (k > 0) {
         var pe = errsAt(k-1);
-        impC.strokeStyle = k <= shown ? '#1F6F2E' : '#c8d2df'; impC.beginPath(); impC.moveTo(30+((k-1)/maxN)*470, 195-(pe.tr/maxV)*160); impC.lineTo(x2, yT); impC.stroke();
-        impC.strokeStyle = k <= shown ? '#C00000' : '#e6b3b3'; impC.beginPath(); impC.moveTo(30+((k-1)/maxN)*470, 195-(pe.te/maxV)*160); impC.lineTo(x2, yS); impC.stroke();
+        impC.strokeStyle = '#1F6F2E'; impC.beginPath();
+        impC.moveTo(30+((k-1)/maxN)*470, 170-(pe.tr/maxV)*145); impC.lineTo(x2, yT); impC.stroke();
+        impC.strokeStyle = '#C00000'; impC.beginPath();
+        impC.moveTo(30+((k-1)/maxN)*470, 170-(pe.te/maxV)*145); impC.lineTo(x2, yS); impC.stroke();
       }
     }
-    impC.fillStyle = '#94a3b8'; impC.font = '10px Segoe UI'; impC.fillText('splits', 478, 210);
+    impC.fillStyle = '#94a3b8'; impC.font = '10px Segoe UI'; impC.fillText('splits', 478, 184);
   }
 
   function drawTree() {
     treeSvg.innerHTML = '';
     var leaves = revealedRegions();
-    var lines = [], y = 30, shownCount = 0;
+    var cols = 3;
     for (var i = 0; i < leaves.length; i++) {
       if (i >= 12) break;
-      shownCount++;
-      var g = gini(leaves[i].n1 / leaves[i].ids.length);
-      lines.push('leaf: n=' + leaves[i].ids.length + ', class1=' + leaves[i].n1 + ', Gini=' + g.toFixed(3));
-    }
-    if (!lines.length) lines.push('Add splits to reveal leaves.');
-    else if (leaves.length > shownCount) lines.push('+ ' + (leaves.length - shownCount) + ' more leaves');
-    for (var i = 0; i < lines.length; i++) {
+      var col = i % cols;
+      var row = Math.floor(i / cols);
+      var lx = 15 + col * 325;
+      var ly = 20 + row * 22;
+      var g = (metric === 'gini') ? gini(leaves[i].p) : entropy(leaves[i].p);
+      var pred = (leaves[i].n1 * 2 >= leaves[i].ids.length) ? 'Class 1' : 'Class 0';
       var t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      t.setAttribute('x', 14); t.setAttribute('y', y); t.setAttribute('fill', '#1F3864'); t.setAttribute('font-size', '13');
-      t.textContent = lines[i]; treeSvg.appendChild(t); y += 22;
+      t.setAttribute('x', lx); t.setAttribute('y', ly);
+      t.setAttribute('fill', pred === 'Class 1' ? '#C026D3' : '#1F6F2E');
+      t.setAttribute('font-size', '12');
+      t.setAttribute('font-family', 'Segoe UI, sans-serif');
+      t.textContent = 'Leaf ' + (i+1) + ' (' + pred + '): n=' + leaves[i].ids.length + ', n1=' + leaves[i].n1 + ', ' + (metric === 'gini' ? 'Gini' : 'Ent') + '=' + g.toFixed(3);
+      treeSvg.appendChild(t);
+    }
+    if (leaves.length > 12) {
+      var more = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      more.setAttribute('x', 15); more.setAttribute('y', 105);
+      more.setAttribute('fill', '#64748b'); more.setAttribute('font-size', '11');
+      more.textContent = '+ ' + (leaves.length - 12) + ' additional leaves';
+      treeSvg.appendChild(more);
     }
   }
 
@@ -326,7 +385,7 @@
   document.getElementById('grow').onclick = function () { shown = orderNodes.length; draw(); };
   document.getElementById('resample').onclick = function () { var g = genData(); PTS = g.build; TEST = g.tst; buildWholeTree(); draw(); };
   document.getElementById('mleaf').onchange = function () { minLeaf = parseInt(this.value, 10); buildWholeTree(); draw(); };
-  document.getElementById('imp').onchange = function () { metric = this.value; draw(); };
+  document.getElementById('imp').onchange = function () { metric = this.value; buildWholeTree(); draw(); };
 
   var g0 = genData(); PTS = g0.build; TEST = g0.tst;
   buildWholeTree();

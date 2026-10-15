@@ -5,23 +5,41 @@ $presentation-heading-color: #1F3864;
 $link-color: #1F6F2E;
 $code-color: #C00000;
 $presentation-font-size-root: 30px;
-$presentation-h1-font-size: 1.15em;
+$presentation-h1-font-size: 1.0em;
+$presentation-h2-font-size: 1.0em;
+$presentation-h3-font-size: 1.0em;
+$presentation-h4-font-size: 1.0em;
+$revealjs-h1-font-size: 1.0em;
+$revealjs-h2-font-size: 1.0em;
+$revealjs-h3-font-size: 1.0em;
+$revealjs-h4-font-size: 1.0em;
 
 /*-- scss:rules --*/
-.reveal .slides section h1 {
-  color: #1F3864;
-  font-weight: 700;
-  font-size: 1.15em;
-  line-height: 1.2;
-  margin: 0 0 0.45em 0;
-  padding-bottom: 0.15em;
-  border-bottom: 3px solid #1F6F2E;
+.reveal .slides section h1,
+.reveal .slides section h2,
+.reveal .slides section h3,
+.reveal .slides section h4,
+.reveal .slides section.title-slide h1,
+.reveal .title-slide h1,
+.reveal[data-navigation-mode="linear"] .title-slide h1,
+.reveal[data-navigation-mode="linear"] .slides section h1 {
+  font-size: 1.0em !important;
+  color: #1F3864 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0.45em !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  border-bottom: none !important;
+  padding-bottom: 0 !important;
 }
 
-.reveal .slides section.cover h1 {
-  border-bottom: none;
-  font-size: 2.1em;
+.reveal .slides section.cover h1,
+.reveal .slides section#title-slide h1.title,
+.reveal[data-navigation-mode="linear"] #title-slide h1.title {
+  border-bottom: none !important;
+  font-size: 1.75em !important;
   letter-spacing: 0.02em;
+  color: #1F3864 !important;
 }
 
 .reveal .slides section.cover .subtitle-line {
@@ -58,17 +76,37 @@ $presentation-h1-font-size: 1.15em;
 .reveal .tall img { max-height: 560px; }
 .reveal .short img { max-height: 330px; }
 
+/* Table layout and styling to prevent overflow */
 .reveal table {
-  font-size: 0.85em;
-  margin: 0.3em auto;
-  border-collapse: collapse;
+  font-size: 0.62em !important;
+  margin: 0.4em auto !important;
+  border-collapse: collapse !important;
+  width: auto !important;
+  max-width: 98% !important;
 }
-.reveal table th, .reveal table td {
-  padding: 0.2em 0.7em;
-  border-bottom: 1px solid #cbd5e1;
+.reveal table th,
+.reveal table td {
+  padding: 0.22em 0.5em !important;
+  line-height: 1.25 !important;
+  border-bottom: 1px solid #cbd5e1 !important;
   text-align: center;
 }
-.reveal table th { border-bottom: 2px solid #1F3864; color: #1F3864; }
+.reveal table th {
+  border-bottom: 2px solid #1F3864 !important;
+  color: #1F3864 !important;
+  font-weight: 700 !important;
+}
+.reveal table tr:last-child td {
+  border-bottom: none !important;
+}
+
+.reveal .compact-table table {
+  font-size: 0.56em !important;
+}
+.reveal .compact-table th,
+.reveal .compact-table td {
+  padding: 0.18em 0.35em !important;
+}
 
 .reveal .slide-number { color: #1F6F2E; }
 .reveal .progress span { background: #1F6F2E; }

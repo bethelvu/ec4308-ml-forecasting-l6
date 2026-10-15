@@ -34,7 +34,7 @@
       vertical-align: middle;
     }
   </style>
-  <link rel="stylesheet" href="chapter6_files/libs/revealjs/dist/theme/quarto-1c93194c1b4f096e9a67edeaac8ca77a.css">
+  <link rel="stylesheet" href="chapter6_files/libs/revealjs/dist/theme/quarto-4f9b843d00f714b55321dcef48dc6f08.css">
   <link href="chapter6_files/libs/revealjs/plugin/quarto-line-highlight/line-highlight.css" rel="stylesheet">
   <link href="chapter6_files/libs/revealjs/plugin/reveal-menu/menu.css" rel="stylesheet">
   <link href="chapter6_files/libs/revealjs/plugin/reveal-menu/quarto-menu.css" rel="stylesheet">
@@ -159,7 +159,7 @@
 <section class="slide level1">
 <h1>1) Introduction</h1>
 <ul>
-<li>So far, we have stayed within the familiar parametric models framework: estimate a linear regression with various regularizations.</li>
+<li>So far, we have stayed within the familiar parametric model framework: estimating linear regressions with various regularizations.</li>
 <li>Although some of the models fitted could be classified as nonparametric (e.g., polynomial series whose degree grows with the sample size), we still wrote down the models in terms of a vector of parameters.</li>
 <li>Today we will talk about methods that belong to the realm of <em>nonparametric estimation</em>.</li>
 </ul>
@@ -250,9 +250,9 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 <section id="idea-4" class="slide level1">
 <h1>2) Regression tree idea</h1>
 <ul>
-<li>Ideally, for a fixed number <span class="math inline">\(M\)</span> of boxes, we would choose the partition <span class="math inline">\((R_1,\dots,R_M)\)</span> to minimize (where <span class="math inline">\(\hat y_{R_m}\)</span> is the mean of <span class="math inline">\(y\)</span> in <span class="math inline">\(R_m\)</span>)</li>
+<li>Ideally, for a fixed number <span class="math inline">\(M\)</span> of boxes, we would choose the partition <span class="math inline">\((R_1,\dots,R_M)\)</span> to minimize (where <span class="math inline">\(\hat y_{R_m} \equiv \hat c_m\)</span> is the mean of <span class="math inline">\(y\)</span> in <span class="math inline">\(R_m\)</span>):</li>
 </ul>
-<p><span class="math display">\[\sum_{m=1}^{M}\ \sum_{i:\,x_i\in R_m}\left(y_i-\hat y_{R_m}\right)^2 .\]</span></p>
+<p><span class="math display">\[\sum_{m=1}^{M}\ \sum_{i:\,x_i\in R_m}\left(y_i-\hat y_{R_m}\right)^2.\]</span></p>
 <ul>
 <li>Problem: finding the best partition is computationally infeasible. We cannot enumerate all possible trees, i.e., all combinations of a first split and lower-level splits.</li>
 <li>Thus, we use a <em>greedy</em> method: make the best split at each step, without looking ahead.</li>
@@ -264,8 +264,8 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 <li>Main idea: form the tree using <em>recursive</em> binary partitions of the data.</li>
 <li><strong>Step 1:</strong> define <span class="math inline">\(R_1(j,c)=\{X \mid X_j&lt;c\}\)</span> and <span class="math inline">\(R_2(j,c)=\{X \mid X_j\ge c\}\)</span>, and choose the predictor <span class="math inline">\(j\)</span> and cut-point <span class="math inline">\(c\)</span> to solve</li>
 </ul>
-<p><span class="math display">\[\min_{j,\,c}\ \sum_{i:\,x_i\in R_1(j,c)}\left(y_i-\hat y_{i,R_1}\right)^2+\sum_{i:\,x_i\in R_2(j,c)}\left(y_i-\hat y_{i,R_2}\right)^2,\]</span></p>
-<p>where <span class="math inline">\(\hat y_{i,R_k}\)</span> is the forecast of <span class="math inline">\(y\)</span> based on data in region <span class="math inline">\(R_k\)</span> (usually the sample mean of <span class="math inline">\(y\)</span> in that region).</p>
+<p><span class="math display">\[\min_{j,\,c}\ \sum_{i:\,x_i\in R_1(j,c)}\left(y_i-\hat y_{R_1}\right)^2+\sum_{i:\,x_i\in R_2(j,c)}\left(y_i-\hat y_{R_2}\right)^2,\]</span></p>
+<p>where <span class="math inline">\(\hat y_{R_k}\)</span> is the forecast of <span class="math inline">\(y\)</span> based on data in region <span class="math inline">\(R_k\)</span> (usually the sample mean of <span class="math inline">\(y\)</span> in that region).</p>
 </section>
 <section id="cart-2" class="slide level1">
 <h1>2) Building a tree: CART</h1>
@@ -280,7 +280,7 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 <li>Boston data: <code>medv</code> (median home value) on <code>lstat</code> (% lower-status population) only; pruned to 7 leaves, the size cross-validation (CV) picks in Section 3.</li>
 </ul>
 
-<img data-src="media/image12.png" class="quarto-figure quarto-figure-center r-stretch" style="width:88.0%"><ul>
+<img data-src="media/image12.png" class="quarto-figure quarto-figure-center r-stretch" style="width:84.0%"><ul>
 <li>At each interior node, we go left if <span class="math inline">\(x&lt;c\)</span>, right if <span class="math inline">\(x\ge c\)</span>.</li>
 <li>Each observation goes down the tree until it reaches a leaf.</li>
 <li>The leaves give a partition of <span class="math inline">\(X\)</span>-space into disjoint regions.</li>
@@ -289,24 +289,26 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 <section id="boston-2" class="slide level1">
 <h1>2) Building a tree: Boston data</h1>
 
-<img data-src="media/image12.png" class="quarto-figure quarto-figure-center r-stretch" style="width:88.0%"><ul>
+<img data-src="media/image12.png" class="quarto-figure quarto-figure-center r-stretch" style="width:84.0%"><ul>
 <li>The resulting fitted function is just a step function with steps given by the tree partition.</li>
 <li>To make a prediction, find the interval to which the new observation belongs and set the forecast equal to the sample mean of that region.</li>
 </ul>
 </section>
 <section id="boston-3" class="slide level1">
 <h1>2) Building a tree: Boston data</h1>
+<div class="columns">
+<div class="column" style="width:44%;">
 <ul>
 <li>Consider an additional predictor <span class="math inline">\(x_2=\)</span> <code>dis</code> (weighted mean of distances to five Boston employment centers). Again pruned to 7 leaves.</li>
-</ul>
-
-<img data-src="media/image13.png" class="quarto-figure quarto-figure-center r-stretch" style="width:92.0%"><ul>
 <li>We can see how the <span class="math inline">\(X\)</span>-space is partitioned.</li>
 <li>Notable feature: automatic interaction detection (in this fitted tree, <code>dis</code> is used only in some ranges of <code>lstat</code>).</li>
 </ul>
 <div class="guide">
 <p>Reading guide: <code>dis</code> is used in three of the four <code>lstat</code> bands, but not for <span class="math inline">\(9.725\le\)</span> <code>lstat</code> <span class="math inline">\(&lt;16.085\)</span> (leaf 20.3). In this fitted tree the effect of <code>dis</code> depends on <code>lstat</code>: suggestive of an interaction, found without being told.</p>
 </div>
+</div><div class="column" style="width:56%;">
+<p><img data-src="media/image13.png" style="width:100.0%"></p>
+</div></div>
 </section>
 <section id="boston-4" class="slide level1">
 <h1>2) Building a tree: Boston data</h1>
@@ -333,14 +335,14 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 <li>Data: 1991 Survey of Income and Program Participation (SIPP), <span class="math inline">\(N=9{,}915\)</span>. We try to predict 401(k) eligibility.</li>
 <li>In Section 4, trees are fit on a training sample of 8,000 and evaluated on the remaining 1,915 (test sample).</li>
 <li>List of predictors: income, age, schooling, family size, married dummy, male dummy, two-earner household dummy.</li>
-<li>Such a model could be used to estimate propensity scores for studying the effect of 401(k) eligibility on wealth (e.g., Belloni et al., 2014).</li>
+<li>Such a classification model could be used to estimate propensity scores for studying the effect of 401(k) eligibility on wealth (e.g., Belloni et al., 2014, who use Lasso; modern causal ML uses random forests or Double ML).</li>
 <li>Since eligibility is a binary variable, predicting it is a <em>classification</em> problem (its splitting criteria come in Section 4).</li>
 </ul>
 </section>
 <section class="slide level1">
 <h1>2) 401(k) data: simple tree</h1>
 <ul>
-<li>A simple tree with depth <span class="math inline">\(\le 4\)</span>, fit on all 9,915 obs.; leaves show the predicted class and counts of <span style="white-space:nowrap"><span class="math inline">\(y=0\)</span> / <span class="math inline">\(y=1\)</span></span>.</li>
+<li>For a simple tree with depth <span class="math inline">\(\le 4\)</span> fit on all 9,915 observations, leaves show the predicted class and counts of <span style="white-space:nowrap"><span class="math inline">\(y=0\)</span> / <span class="math inline">\(y=1\)</span></span>:</li>
 </ul>
 
 <img data-src="media/image17.png" class="quarto-figure quarto-figure-center r-stretch" style="width:66.0%"><div class="tiny">
@@ -372,7 +374,7 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 <li>The set of leaves gives a partition of the <span class="math inline">\(X\)</span>-space.</li>
 <li>For prediction, we let the observation <span class="math inline">\(x_i\)</span> follow the path dictated by the splitting rules down the tree until it reaches a leaf:
 <ul>
-<li>for a continuous outcome, the prediction is the sample mean of <span class="math inline">\(Y\)</span> in that node;</li>
+<li>for a continuous outcome, the prediction is the sample mean of <span class="math inline">\(y\)</span> in that node;</li>
 <li>for a categorical outcome, it is based on the category proportions of the training data in that node (e.g., the predicted category is the majority category in that node).</li>
 </ul></li>
 </ul>
@@ -398,7 +400,7 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 </div></div>
 </section>
 <section class="slide level1">
-<h1>2) A quick summary on trees: Problems</h1>
+<h1>2) A quick summary on trees: problems</h1>
 <div class="columns">
 <div class="column" style="width:64%;">
 <ul>
@@ -429,9 +431,12 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 <ul>
 <li>Tree choice can be represented as a minimization problem over subtrees <span class="math inline">\(T\)</span> of a big initial tree, with penalized objective <span class="math inline">\(Q(T,y)\)</span>:</li>
 </ul>
-<p><span class="math display">\[\hat T_\alpha=\arg\min_T Q(T,y)=\arg\min_T\ L(T,y)+\alpha|T|\]</span></p>
+<p><span class="math display">\[\hat T_\alpha=\arg\min_T Q(T,y)=\arg\min_T\ \Big[L(T,y)+\alpha|T|\Big]\]</span></p>
 <ul>
-<li>Here <span class="math inline">\(L(T,y)\)</span> is a loss function of using the tree <span class="math inline">\(T\)</span> to forecast <span class="math inline">\(y\)</span>: usually the residual sum of squares (RSS). With squared loss, <span class="math inline">\(\ \hat T_\alpha=\arg\min_T\ \sum_{m=1}^{|T|}\sum_{i:\,x_i\in R_m}\left(y_i-\hat y_{R_m}\right)^2+\alpha|T|\)</span>.</li>
+<li>Here <span class="math inline">\(L(T,y)\)</span> is a loss function of using the tree <span class="math inline">\(T\)</span> to forecast <span class="math inline">\(y\)</span>: usually the residual sum of squares (RSS). With squared loss:</li>
+</ul>
+<p><span class="math display">\[\hat T_\alpha=\arg\min_T\ \sum_{m=1}^{|T|}\sum_{i:\,x_i\in R_m}\left(y_i-\hat y_{R_m}\right)^2+\alpha|T|.\]</span></p>
+<ul>
 <li><span class="math inline">\(|T|\)</span> is the number of leaves – a measure of tree complexity.</li>
 <li><span class="math inline">\(\alpha\)</span> is the “penalty” parameter that performs regularization. It plays the role of <span class="math inline">\(\lambda\)</span> in penalized regression fitting.</li>
 <li>If <span class="math inline">\(\alpha=0\)</span>, we would keep the full big tree, which overfits the data. We need to choose <span class="math inline">\(\alpha\)</span> carefully: it is the key tuning choice.</li>
@@ -461,14 +466,14 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 <li>For a given <span class="math inline">\(\alpha\)</span>, choose the subtree that has the smallest <span class="math inline">\(Q(T,y)\)</span>.</li>
 </ul>
 <div class="guide">
-<p>Weakest link: for an internal node <span class="math inline">\(t\)</span> with branch <span class="math inline">\(T_t\)</span>, let <span class="math inline">\(L(t)\)</span> be the loss if <span class="math inline">\(t\)</span> is collapsed to a leaf and <span class="math inline">\(L(T_t)\)</span> the loss of its branch. The increase in loss per leaf removed is <span class="math inline">\(g(t)=\dfrac{L(t)-L(T_t)}{|T_t|-1}\)</span>. Collapse the node with the smallest <span class="math inline">\(g(t)\)</span>, then repeat; the successive values of <span class="math inline">\(g\)</span> are the <span class="math inline">\(\alpha\)</span>’s at which the optimal subtree changes.</p>
+<p>Weakest link: for an internal node <span class="math inline">\(t\)</span> with branch <span class="math inline">\(T_t\)</span>, let <span class="math inline">\(L(t)\)</span> be the loss if <span class="math inline">\(t\)</span> is collapsed to a leaf and <span class="math inline">\(L(T_t)\)</span> the loss of its branch. The increase in loss per leaf removed is <span class="math inline">\(g(t)=\dfrac{L(t)-L(T_t)}{|T_t|-1}\)</span>. For example, collapsing a 3-leaf branch (<span class="math inline">\(|T_t|=3\)</span>) with loss 20 to a leaf with loss 50 gives <span class="math inline">\(g(t)=\frac{50-20}{3-1}=15\)</span>. Collapse the node with the smallest <span class="math inline">\(g(t)\)</span>, then repeat; the successive values of <span class="math inline">\(g\)</span> are the <span class="math inline">\(\alpha\)</span>’s at which the optimal subtree changes.</p>
 </div>
 </section>
 <section class="slide level1">
 <h1>3) Choice of <span class="math inline">\(\alpha\)</span></h1>
 <ul>
 <li>The remaining (most important) step is to choose <span class="math inline">\(\alpha\)</span> from the data.</li>
-<li>Not much surprise here: the usual approach is K-fold cross-validation (CV). In each fold, grow and prune on the training part and compute the error on the held-out part; pick the <span class="math inline">\(\alpha\)</span> with the lowest average CV error.</li>
+<li>Not much surprise here: the usual approach is <span class="math inline">\(K\)</span>-fold cross-validation (CV). In each fold, grow and prune on the training part and compute the error on the held-out part; pick the <span class="math inline">\(\alpha\)</span> with the lowest average CV error.</li>
 </ul>
 </section>
 <section class="slide level1">
@@ -520,8 +525,8 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 </div></div>
 </section>
 <section class="slide level1 companion-only">
-<h1>Interactive: prune a big tree with <span class="math inline">\(\alpha\)</span></h1>
-<iframe src="tree-demo.html" width="100%" height="602" style="border:none;" title="Interactive regression tree: grow a big tree, then prune it with cost-complexity alpha">
+<h1>3) Interactive: prune a big tree with <span class="math inline">\(\alpha\)</span></h1>
+<iframe src="tree-demo.html" width="100%" height="560" style="border:none;" title="Interactive regression tree: grow a big tree, then prune it with cost-complexity alpha">
 </iframe>
 </section>
 <section class="slide level1">
@@ -531,9 +536,9 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 <ul>
 <li>Let us come back to the classification problem.</li>
 <li>MSE is less natural here – we use a different loss.</li>
-<li>Let the loss function be <span class="math inline">\(\ L(T,y)=\sum_{m=1}^{|T|}N_m\,L_m(T,y_m)\)</span>.</li>
+<li>Let the loss function be <span class="math inline">\(L(T,y)=\sum_{m=1}^{|T|}N_m\,L_m(y_m)\)</span>.</li>
 <li><span class="math inline">\(m\)</span> indexes terminal nodes in tree <span class="math inline">\(T\)</span>; <span class="math inline">\(N_m\)</span> is the no. of obs. in terminal node <span class="math inline">\(m\)</span>; <span class="math inline">\(y_m\)</span> is the vector of outcomes for obs. in node <span class="math inline">\(m\)</span>; <span class="math inline">\(L_m\)</span> is the node loss (next slide).</li>
-<li>Let <span class="math inline">\(R_m\)</span> denote the region of <span class="math inline">\(X\)</span> corresponding to node <span class="math inline">\(m\)</span>, and <span class="math inline">\(\ \hat p_{mk}=\frac{1}{N_m}\sum_{i:\,x_i\in R_m}1(y_i=k)\)</span>, <span class="math inline">\(k=1,\dots,K\)</span>.</li>
+<li>Let <span class="math inline">\(R_m\)</span> denote the region of <span class="math inline">\(X\)</span> corresponding to node <span class="math inline">\(m\)</span>, and <span class="math inline">\(\hat p_{mk}=\frac{1}{N_m}\sum_{i:\,x_i\in R_m}1(y_i=k)\)</span>, <span class="math inline">\(k=1,\dots,K\)</span>.</li>
 <li>Observations in node <span class="math inline">\(m\)</span> are classified to <span class="math inline">\(k(m)=\arg\max_k \hat p_{mk}\)</span>.</li>
 </ul>
 </div><div class="column" style="width:36%;">
@@ -549,28 +554,28 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 <div class="column" style="width:64%;">
 <p>Choices for the node loss <span class="math inline">\(L_m\)</span>:</p>
 <ul>
-<li><strong>Misclassification error:</strong> <span class="math inline">\(\ \dfrac{1}{N_m}\sum_{i:\,x_i\in R_m}1\big(y_i\ne k(m)\big)=1-\hat p_{m,k(m)}\)</span>
+<li><strong>Misclassification error:</strong> <span class="math inline">\(\dfrac{1}{N_m}\sum_{i:\,x_i\in R_m}1\big(y_i\ne k(m)\big)=1-\hat p_{m,k(m)}\)</span>
 <ul>
 <li>binary case: <span class="math inline">\(1-\max\{p,\,1-p\}\)</span>, with <span class="math inline">\(p\)</span> the proportion with <span class="math inline">\(y=1\)</span>.</li>
 </ul></li>
-<li><strong>Gini index:</strong> <span class="math inline">\(\ \sum_{k=1}^{K}\hat p_{mk}(1-\hat p_{mk})\)</span>; binary case: <span class="math inline">\(2p(1-p)\)</span>.</li>
-<li><strong>Cross-entropy or deviance</strong> (negative log-likelihood): <span class="math inline">\(\ -\sum_{k=1}^{K}\hat p_{mk}\log\hat p_{mk}\)</span>; binary case: <span class="math inline">\(-p\log p-(1-p)\log(1-p)\)</span>.</li>
+<li><strong>Gini index:</strong> <span class="math inline">\(\sum_{k=1}^{K}\hat p_{mk}(1-\hat p_{mk})\)</span>; binary case: <span class="math inline">\(2p(1-p)\)</span>.</li>
+<li><strong>Cross-entropy or deviance</strong> (negative log-likelihood): <span class="math inline">\(-\sum_{k=1}^{K}\hat p_{mk}\log\hat p_{mk}\)</span>; binary case: <span class="math inline">\(-p\log p-(1-p)\log(1-p)\)</span>.</li>
 <li>Some also use squared loss (MSE) for a binary <span class="math inline">\(y\)</span>.</li>
 </ul>
+<div class="guide">
+<p>Worked example (binary node, natural log): <span class="math inline">\(p=0.2\)</span> gives misclassification <span class="math inline">\(0.2\)</span>, Gini <span class="math inline">\(2(0.2)(0.8)=0.32\)</span>, entropy <span class="math inline">\(\approx 0.50\)</span>; at <span class="math inline">\(p=0.5\)</span> all three peak (<span class="math inline">\(0.5\)</span>, <span class="math inline">\(0.5\)</span>, <span class="math inline">\(\log 2\approx0.69\)</span>).</p>
+</div>
 </div><div class="column" style="width:36%;">
 <p><img data-src="media/image28.png" style="width:100.0%"></p>
 <div class="tiny">
 <p><em>Adapted from ESL Fig. 9.2.</em></p>
 </div>
 </div></div>
-<div class="guide">
-<p>Worked example (binary node, natural log): <span class="math inline">\(p=0.2\)</span> gives misclassification <span class="math inline">\(0.2\)</span>, Gini <span class="math inline">\(2(0.2)(0.8)=0.32\)</span>, entropy <span class="math inline">\(\approx 0.50\)</span>; at <span class="math inline">\(p=0.5\)</span> all three peak (<span class="math inline">\(0.5\)</span>, <span class="math inline">\(0.5\)</span>, <span class="math inline">\(\log 2\approx0.69\)</span>).</p>
-</div>
 </section>
 <section class="slide level1 companion-only">
-<h1>Interactive: grow a classification tree, watch Gini and cross-entropy fall</h1>
-<p>Two interleaved classes; CART picks the split that most reduces weighted impurity. Step through the splits and switch the curve between <strong>Gini</strong> and <strong>cross-entropy</strong> to see the loss concepts above in action. Try lowering <em>min. obs. per leaf</em> and growing all the way: the boundary overfits and train error collapses — an intuition for pruning (next section).</p>
-<iframe src="classifier-demo.html" width="100%" height="760" style="border:none;" title="Interactive classification tree: recursive splitting and Gini vs cross-entropy impurity">
+<h1>4) Interactive: grow a classification tree, watch Gini and cross-entropy fall</h1>
+<p>Two interleaved classes; CART picks the split that most reduces weighted impurity. Step through the splits and switch the criterion between <strong>Gini</strong> and <strong>Cross-entropy</strong> to see how recursive partitioning isolates regions. Lower <em>min. obs. per leaf</em> to watch the boundary overfit and train error collapse — an intuition for pruning (covered in Section 3).</p>
+<iframe src="classifier-demo.html" width="100%" height="560" style="border:none;" title="Interactive classification tree: recursive splitting and Gini vs cross-entropy impurity">
 </iframe>
 </section>
 <section class="slide level1">
@@ -595,43 +600,43 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 <section class="slide level1">
 <h1>4) Classification: 401(k) eligibility</h1>
 <div class="columns">
-<div class="column" style="width:30%;">
+<div class="column" style="width:36%;">
 <ul>
 <li>CV-min Gini tree:</li>
 </ul>
 <div class="guide">
 <p>CV-min = CV-minimizing. Grown with Gini (<code>rpart</code>); CV error is the misclassification rate. Fit on the training sample (8,000 obs.). Each leaf shows the predicted class, then the counts of <span style="white-space:nowrap"><span class="math inline">\(y=0\)</span> / <span class="math inline">\(y=1\)</span></span>.</p>
 </div>
-</div><div class="column" style="width:70%;">
+</div><div class="column" style="width:64%;">
 <p><img data-src="media/image30.png" style="width:92.0%"></p>
 </div></div>
 </section>
 <section id="k401-2" class="slide level1">
 <h1>4) Classification: 401(k) eligibility</h1>
 <div class="columns">
-<div class="column" style="width:62%;">
+<div class="column" style="width:36%;">
 <ul>
 <li>CV-min deviance tree (not unique; the smallest is shown):</li>
 </ul>
-<p><img data-src="media/image31.png" style="width:78.0%"></p>
-</div><div class="column" style="width:38%;">
 <div class="guide">
 <p>Grown and CV-pruned on deviance (<code>tree</code> package). Both leaves of the left split predict 0: the split makes the nodes purer (lower deviance) without changing the predicted class.</p>
 </div>
+</div><div class="column" style="width:64%;">
+<p><img data-src="media/image31.png" style="width:85.0%"></p>
 </div></div>
 </section>
 <section id="k401-3" class="slide level1">
 <h1>4) Classification: 401(k) eligibility</h1>
 <div class="columns">
-<div class="column" style="width:30%;">
+<div class="column" style="width:36%;">
 <ul>
 <li>CV-min squared loss tree:</li>
 </ul>
 <div class="guide">
-<p>Grown and CV-pruned on squared loss (<code>rpart</code>, anova). Leaves show the share with <span class="math inline">\(y=1\)</span> and the node size. Classify 1 if the share exceeds 0.5: only the right-most leaf.</p>
+<p>Grown and CV-pruned on squared loss (<code>rpart</code>, anova). Leaves show the share with <span class="math inline">\(y=1\)</span> and the node size. Classify 1 if the share exceeds 0.5: only the rightmost leaf.</p>
 </div>
-</div><div class="column" style="width:70%;">
-<p><img data-src="media/image32.png" style="width:96.0%"></p>
+</div><div class="column" style="width:64%;">
+<p><img data-src="media/image32.png" style="width:94.0%"></p>
 </div></div>
 </section>
 <section class="slide level1">
@@ -639,8 +644,9 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 <ul>
 <li>All three trees give the same 0/1 rule (predict 1 if income is above about $57,000), so they make identical test-set predictions.</li>
 <li>For reference, we also fit a logit model using the same variables; its results are in parentheses.</li>
-<li>Test-set errors: trees 665/1915 (logit 651; predicting 0 for everyone 735):</li>
+<li>Test-set errors: trees 665/1,915 (logit 651; predicting 0 for everyone 735):</li>
 </ul>
+<div class="compact-table">
 <table class="caption-top">
 <thead>
 <tr class="header">
@@ -665,6 +671,7 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 </tr>
 </tbody>
 </table>
+</div>
 </section>
 <section class="slide level1">
 <h1>4) Performance measures for classification</h1>
@@ -673,32 +680,51 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 <li>Below are some common terms you may encounter.</li>
 <li><strong>Confusion matrix</strong> = matrix of predicted vs.&nbsp;actual values:</li>
 </ul>
+<div class="compact-table">
 <table class="caption-top">
+<colgroup>
+<col style="width: 21%">
+<col style="width: 10%">
+<col style="width: 28%">
+<col style="width: 28%">
+<col style="width: 10%">
+</colgroup>
 <thead>
 <tr class="header">
 <th></th>
 <th style="text-align: center;"></th>
-<th style="text-align: center;">Actual 0</th>
-<th style="text-align: center;">Actual 1</th>
+<th style="text-align: center;">Actual 0 (TN / FP)</th>
+<th style="text-align: center;">Actual 1 (FN / TP)</th>
+<th style="text-align: center;">Total</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td><strong>Predicted</strong></td>
 <td style="text-align: center;"><strong>0</strong></td>
-<td style="text-align: center;">1052</td>
-<td style="text-align: center;">537</td>
+<td style="text-align: center;">1052 (TN)</td>
+<td style="text-align: center;">537 (FN)</td>
+<td style="text-align: center;">1589</td>
 </tr>
 <tr class="even">
 <td></td>
 <td style="text-align: center;"><strong>1</strong></td>
-<td style="text-align: center;">128</td>
-<td style="text-align: center;">198</td>
+<td style="text-align: center;">128 (FP)</td>
+<td style="text-align: center;">198 (TP)</td>
+<td style="text-align: center;">326</td>
+</tr>
+<tr class="odd">
+<td><strong>Total</strong></td>
+<td style="text-align: center;"></td>
+<td style="text-align: center;">1180</td>
+<td style="text-align: center;">735</td>
+<td style="text-align: center;">1915</td>
 </tr>
 </tbody>
 </table>
+</div>
 <ul>
-<li><strong>Lift:</strong> summary of prediction performance comparing % of true positives (TP) to % classified as 1 (N).</li>
+<li><strong>Lift (cumulative gains):</strong> summary of prediction performance comparing % of true positives (TP) to % classified as 1 (N).</li>
 <li><strong>ROC</strong> (Receiver Operating Characteristic): summary of prediction performance comparing % of true positives (TP) to % of false positives (FP).</li>
 </ul>
 </section>
@@ -738,7 +764,7 @@ R_3&amp;=\{X \mid \text{Years}\ge 4.5,\ \text{Hits}\ge 117.5\}.
 <li>Tree-based methods provide a benchmark in many modern machine learning / big data settings.</li>
 <li>Small trees are simple to interpret, scalable, and give reasonable (if rarely the best) predictions “off-the-shelf”.</li>
 <li>They perform variable selection and detect nonlinearities and interactions <em>without careful user specification</em>.</li>
-<li>In the 401(k) example, the CV-pruned trees (3–8 leaves) all reduce to one rule, predict 1 if income &gt; ≈$57,000: 665/1915 test errors vs.&nbsp;651 for logit and 735 for predicting 0.</li>
+<li>In the 401(k) example, the CV-pruned trees (3–8 leaves) all reduce to a single decision rule—predict 1 if <span class="math inline">\(\text{income} \gtrsim \$57{,}000\)</span>—yielding 665/1,915 test errors (vs.&nbsp;651 for logit and 735 for predicting 0).</li>
 <li>They may underperform in prediction in their basic form; tree size is typically chosen by CV-based pruning.</li>
 <li>They may be unstable: a small change in data can result in a large change in the estimated tree. <em>Next: bagging and random forests reduce this instability; boosting mainly improves accuracy.</em></li>
 </ul>
